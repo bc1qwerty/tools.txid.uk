@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitcoin Tools | txid.uk</title>
+<meta name="description" content="비트코인 개발자 도구 — 주소 검증, 스크립트 디코더, Bech32, Base58, TX 브로드캐스트">
+<meta property="og:title" content="Bitcoin Tools | txid.uk">
+<meta property="og:description" content="비트코인 개발자 도구 모음">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="https://txid.uk" class="logo">₿ <span>txid</span>.uk</a>
+    <nav>
+      <a href="https://txid.uk">탐색기</a>
+      <a href="https://learn.txid.uk">공부방</a>
+      <a href="#" class="active">Tools</a>
+    </nav>
+    <button id="theme-btn" onclick="toggleTheme()" title="테마 전환">🌙</button>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>Bitcoin <span class="accent">Tools</span></h1>
+    <p class="hero-sub">개발자·파워유저를 위한 비트코인 도구 모음</p>
+  </div>
+
+  <div class="tools-grid">
+
+    <!-- 주소 검증 -->
+    <section class="tool-card" id="tool-address">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <h2>주소 검증 · 분석</h2>
+      </div>
+      <div class="tool-body">
+        <input id="addr-input" class="tool-input" placeholder="Bitcoin 주소 입력 (bc1, 1, 3...)" spellcheck="false">
+        <button class="tool-btn" onclick="analyzeAddress()">분석</button>
+        <div id="addr-result" class="tool-result"></div>
+      </div>
+    </section>
+
+    <!-- 스크립트 디코더 -->
+    <section class="tool-card" id="tool-script">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <h2>스크립트 디코더</h2>
+      </div>
+      <div class="tool-body">
+        <input id="script-input" class="tool-input" placeholder="scriptPubKey hex (예: 76a914...88ac)" spellcheck="false">
+        <button class="tool-btn" onclick="decodeScript()">디코드</button>
+        <div id="script-result" class="tool-result"></div>
+      </div>
+    </section>
+
+    <!-- 단위 변환기 -->
+    <section class="tool-card" id="tool-unit">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <h2>단위 변환기</h2>
+      </div>
+      <div class="tool-body">
+        <div class="conv-row"><label>BTC</label><input id="conv-btc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('btc')"></div>
+        <div class="conv-row"><label>Satoshi</label><input id="conv-sat" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('sat')"></div>
+        <div class="conv-row"><label>mBTC</label><input id="conv-mbtc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('mbtc')"></div>
+        <div class="conv-row"><label>bits (μBTC)</label><input id="conv-bits" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('bits')"></div>
+        <div class="conv-row"><label>KRW (원)</label><input id="conv-krw" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('krw')"></div>
+        <div class="conv-row"><label>USD ($)</label><input id="conv-usd" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('usd')"></div>
+        <div class="conv-price-info" id="conv-price-info">가격 로딩 중…</div>
+      </div>
+    </section>
+
+    <!-- Bech32 인코딩/디코딩 -->
+    <section class="tool-card" id="tool-bech32">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <h2>Bech32 / Base58 디코더</h2>
+      </div>
+      <div class="tool-body">
+        <input id="enc-input" class="tool-input" placeholder="주소 또는 hex 입력" spellcheck="false">
+        <div class="btn-row">
+          <button class="tool-btn sm" onclick="decodeBech32()">Bech32 디코드</button>
+          <button class="tool-btn sm" onclick="decodeBase58()">Base58 디코드</button>
+        </div>
+        <div id="enc-result" class="tool-result"></div>
+      </div>
+    </section>
+
+    <!-- TX 브로드캐스트 -->
+    <section class="tool-card" id="tool-broadcast">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <h2>TX 브로드캐스트</h2>
+      </div>
+      <div class="tool-body">
+        <textarea id="tx-hex" class="tool-input textarea" placeholder="서명된 트랜잭션 hex 붙여넣기" spellcheck="false" rows="4"></textarea>
+        <button class="tool-btn danger" onclick="broadcastTx()">네트워크에 전송</button>
+        <div id="broadcast-result" class="tool-result"></div>
+      </div>
+    </section>
+
+    <!-- OP 코드 사전 -->
+    <section class="tool-card" id="tool-opcodes">
+      <div class="tool-header">
+        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <h2>OP 코드 사전</h2>
+      </div>
+      <div class="tool-body">
+        <input id="op-search" class="tool-input" placeholder="OP_RETURN, 0x6a, 106..." oninput="searchOpcode(this.value)">
+        <div id="op-result" class="tool-result op-grid"></div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>© 2025 txid.uk — Bitcoin Explorer</span>
+    <span>mempool.space API 사용</span>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
