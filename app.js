@@ -136,7 +136,7 @@ function decodeBase58() {
   }
   let n = BigInt(0);
   for (const c of s) n = n * 58n + BigInt(ALPHA.indexOf(c));
-  const hex = n.toString(16).padStart(50, '0');
+  const hex = n.toString(16).padStart(50, '0').slice(-50);
   const version = hex.slice(0, 2);
   const versionNames = { '00': 'P2PKH 주소 (mainnet)', '05': 'P2SH 주소 (mainnet)', '6f': 'P2PKH 주소 (testnet)', '80': 'WIF 개인키', '0488b21e': 'xpub', '0488ade4': 'xprv' };
   const html = row('Hex', `<span style="word-break:break-all">${hex}</span>`) +
