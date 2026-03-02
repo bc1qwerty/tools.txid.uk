@@ -69,7 +69,7 @@ function decodeScript() {
     type = 'P2TR'; const tp = hex.slice(4, 68); decoded.push(row('타입','P2TR (Taproot, SegWit v1)')); decoded.push(row('TweakedPubkey', tp));
   } else if (bytes[0]===0x6a) {
     type = 'OP_RETURN'; const data = hex.slice(4); decoded.push(row('타입','OP_RETURN (데이터)')); decoded.push(row('데이터', data));
-    try { decoded.push(row('UTF-8', decodeURIComponent(escape(String.fromCharCode(...bytes.slice(2)))))); } catch {}
+    try { decoded.push(row('UTF-8', new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(bytes.slice(2))))); } catch {}
   } else {
     decoded.push(row('타입','알 수 없는 스크립트')); decoded.push(row('Raw hex', hex));
   }
@@ -83,8 +83,8 @@ let _btcKrw = null, _btcUsd = null;
 async function loadPrices() {
   try {
     const [upbit, cg] = await Promise.all([
-      fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC').then(r=>r.json()),
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').then(r=>r.json())
+      fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC',{signal:AbortSignal.timeout(8000)}).then(r=>r.json()),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',{signal:AbortSignal.timeout(8000)}).then(r=>r.json())
     ]);
     _btcKrw = upbit[0].trade_price;
     _btcUsd = cg.bitcoin.usd;
@@ -151,16 +151,18 @@ function decodeBase58() {
 async function broadcastTx() {
   const hex = document.getElementById('tx-hex').value.trim();
   if (!hex) return;
+  if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length < 20) { showResult('broadcast-result', '<span class="err">유효한 Raw TX hex를 입력하세요</span>', true); return; }
   if (!confirm('이 트랜잭션을 비트코인 메인넷에 브로드캐스트하시겠습니까?\n\n한 번 전송하면 취소할 수 없습니다.')) return;
   showResult('broadcast-result', '전송 중…');
   try {
-    const res = await fetch(API + '/tx', { method: 'POST', body: hex, headers: { 'Content-Type': 'text/plain' } });
+    const res = await fetch(API + '/tx', { method: 'POST', body: hex, headers: { 'Content-Type': 'text/plain' }, signal: AbortSignal.timeout(15000) });
     const txid = await res.text();
     if (res.ok) {
-      showResult('broadcast-result', `<span class="ok">✓ 브로드캐스트 성공!</span>\n` +
-        row('TXID', `<a href="https://txid.uk/#/tx/${txid}" style="color:var(--accent)">${txid}</a>`));
+      const isTxid=/^[0-9a-fA-F]{64}$/.test(txid.trim());
+      const txLink=isTxid?`<a href="https://txid.uk/#/tx/${txid.trim()}" style="color:var(--accent)" target="_blank">${txid.trim()}</a>`:txid.slice(0,200);
+      showResult('broadcast-result', `<span class="ok">✓ 브로드캐스트 성공!</span>\n` + row('TXID', txLink));
     } else {
-      showResult('broadcast-result', `<span class="err">❌ 오류: ${txid}</span>`, true);
+      showResult('broadcast-result', `<span class="err">❌ 오류: ${String(txid).replace(/</g,'&lt;').slice(0,300)}</span>`, true);
     }
   } catch (e) { showResult('broadcast-result', `<span class="err">네트워크 오류: ${e.message}</span>`, true); }
 }
