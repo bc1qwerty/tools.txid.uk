@@ -94,3 +94,5 @@ footer { border-top: 1px solid var(--border); padding: 20px; }
 .lang-menu.open{display:block;}
 .lang-menu button{display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:var(--text2);font-family:var(--font-ko);font-size:.78rem;cursor:pointer;transition:background .15s,color .15s;}
 .lang-menu button:hover{background:var(--bg3);color:var(--accent);}
+
+@media(max-width:768px){.appbar{display:none !important;}}
