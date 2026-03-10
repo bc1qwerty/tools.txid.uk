@@ -111,9 +111,12 @@ document.getElementById('script-input').addEventListener('keydown', e => { if (e
 let _btcKrw = null, _btcUsd = null;
 async function loadPrices() {
   try {
-    const cg = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,krw',{signal:AbortSignal.timeout(8000)}).then(r=>r.json());
-    _btcKrw = cg.bitcoin.krw;
-    _btcUsd = cg.bitcoin.usd;
+    const [upbit, binance] = await Promise.all([
+      fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC',{signal:AbortSignal.timeout(8000)}).then(r=>r.json()),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',{signal:AbortSignal.timeout(8000)}).then(r=>r.json())
+    ]);
+    _btcKrw = upbit[0].trade_price;
+    _btcUsd = parseFloat(binance.price);
     document.getElementById('conv-price-info').textContent =
       `1 BTC = ${_btcKrw.toLocaleString()}원 / $${_btcUsd.toLocaleString()}`;
   } catch { document.getElementById('conv-price-info').textContent = '가격 로드 실패'; }
