@@ -29,7 +29,7 @@ header { background: var(--bg2); border-bottom: 1px solid var(--border); positio
   --accent: #f7931a; --accent2: #e07b10;
   --green: #3fb950; --red: #f85149; --blue: #58a6ff;
   --shadow: 0 4px 20px rgba(0,0,0,0.4);
-  --max-w: 1100px; --radius: 10px;
+  --max-w: 1200px; --radius: 10px;
 }
 [data-theme="light"] {
   --bg: #f6f8fa; --bg2: #ffffff; --bg3: #eaeef2;
