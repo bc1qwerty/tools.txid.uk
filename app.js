@@ -118,7 +118,10 @@ function setLang(l){
   document.getElementById('lang-menu')?.classList.remove('open');
   document.querySelectorAll('[data-ko]').forEach(el=>{
     const val=el.dataset[lang]||el.dataset.en||el.dataset.ko;
-    if(val) el.textContent=val;
+    if(val){
+      if(el.placeholder!==undefined) el.placeholder=val;
+      else el.textContent=val;
+    }
   });
   // re-render opcodes with new lang (OPCODES may not be initialized yet on first call)
   try { if(typeof renderOpcodes==='function') renderOpcodes(OPCODES); } catch(e) {}
