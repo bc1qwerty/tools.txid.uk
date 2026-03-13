@@ -120,8 +120,8 @@ function setLang(l){
     const val=el.dataset[lang]||el.dataset.en||el.dataset.ko;
     if(val) el.textContent=val;
   });
-  // re-render opcodes with new lang
-  if(typeof renderOpcodes==='function') renderOpcodes(OPCODES);
+  // re-render opcodes with new lang (OPCODES may not be initialized yet on first call)
+  try { if(typeof renderOpcodes==='function') renderOpcodes(OPCODES); } catch(e) {}
 }
 function toggleLang(){const m=document.getElementById('lang-menu');m?.classList.toggle('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded',m?.classList.contains('open')||false);}
 document.addEventListener('click',e=>{const m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
