@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://d3js.org https://apps.txid.uk; connect-src https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://apps.txid.uk https://gc.zgo.at https://api.txid.uk; script-src-attr 'unsafe-inline'; connect-src 'self' https://api.txid.uk https://mempool.space https://api.upbit.com https://api.binance.com https://txid.goatcounter.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="apple-touch-icon" href="/icon-192.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,9 +27,11 @@
   <script src="https://apps.txid.uk/global-nav.js" defer></script>
 </head>
 <body>
+<style>.skip-link{position:absolute;top:-40px;left:0;background:var(--accent);color:#fff;padding:8px 16px;z-index:1000;font-size:.8rem;font-family:var(--font-ko);transition:top .2s;text-decoration:none;border-radius:0 0 4px 0}.skip-link:focus{top:0}</style>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 <header>
   <div class="nav-top">
-    <a href="https://txid.uk" class="logo" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-right:6px">
+    <a href="https://txid.uk" class="logo" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-right:6px" aria-hidden="true">
         <circle cx="20" cy="20" r="19" fill="#f7931a"/>
         <rect x="18.5" y="1" width="3" height="38" fill="#0d1117"/>
         <rect x="10" y="18.5" width="29" height="3" fill="#0d1117"/>
@@ -44,8 +46,8 @@
     <div class="nav-right">
       <div id="txid-auth-mount" style="position:relative;display:inline-flex"></div>
       <div class="lang-dropdown">
-        <button class="lang-btn" id="lang-btn" onclick="toggleLang()" title="언어 변경">KO</button>
-        <div class="lang-menu" id="lang-menu">
+        <button class="lang-btn" id="lang-btn" onclick="toggleLang()" title="언어 변경" aria-label="언어 선택" aria-expanded="false">KO</button>
+        <div class="lang-menu" id="lang-menu" role="menu" aria-label="언어 선택">
           <button onclick="setLang('ko')">한국어</button>
           <button onclick="setLang('en')">English</button>
           <button onclick="setLang('ja')">日本語</button>
@@ -57,13 +59,13 @@
 </header>
 
 <div class="learn-links" id="learn-links">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
   <span class="learn-label" data-ko="더 알아보기" data-en="Learn more" data-ja="もっと学ぶ">더 알아보기</span>
   <a class="learn-chip" data-slug="bitcoin-wallet-address" data-ko="지갑 주소란" data-en="Wallet Addresses" data-ja="ウォレットアドレス" href="https://learn.txid.uk/ko/blog/bitcoin-wallet-address/" target="_blank" rel="noopener">지갑 주소란</a>
   <a class="learn-chip" data-slug="how-to-read-bitcoin-transaction" data-ko="트랜잭션 읽는 법" data-en="Reading Transactions" data-ja="トランザクションの読み方" href="https://learn.txid.uk/ko/blog/how-to-read-bitcoin-transaction/" target="_blank" rel="noopener">트랜잭션 읽는 법</a>
 </div>
 
-<main>
+<main id="main">
   <div class="hero">
     <h1>Bitcoin <span class="accent">Tools</span></h1>
     <p class="hero-sub">개발자·파워유저를 위한 비트코인 도구 모음</p>
@@ -74,11 +76,11 @@
     <!-- 주소 검증 -->
     <section class="tool-card" id="tool-address">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <h2>주소 검증 · 분석</h2>
       </div>
       <div class="tool-body">
-        <input id="addr-input" class="tool-input" placeholder="Bitcoin 주소 입력 (bc1, 1, 3...)" spellcheck="false">
+        <input id="addr-input" class="tool-input" placeholder="Bitcoin 주소 입력 (bc1, 1, 3...)" aria-label="비트코인 주소 입력" spellcheck="false">
         <button class="tool-btn" onclick="analyzeAddress()">분석</button>
         <div id="addr-result" class="tool-result"></div>
       </div>
@@ -87,11 +89,11 @@
     <!-- 스크립트 디코더 -->
     <section class="tool-card" id="tool-script">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         <h2>스크립트 디코더</h2>
       </div>
       <div class="tool-body">
-        <input id="script-input" class="tool-input" placeholder="scriptPubKey hex (예: 76a914...88ac)" spellcheck="false">
+        <input id="script-input" class="tool-input" placeholder="scriptPubKey hex (예: 76a914...88ac)" aria-label="스크립트 hex 입력" spellcheck="false">
         <button class="tool-btn" onclick="decodeScript()">디코드</button>
         <div id="script-result" class="tool-result"></div>
       </div>
@@ -100,16 +102,16 @@
     <!-- 단위 변환기 -->
     <section class="tool-card" id="tool-unit">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         <h2>단위 변환기</h2>
       </div>
       <div class="tool-body">
-        <div class="conv-row"><label>BTC</label><input id="conv-btc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('btc')"></div>
-        <div class="conv-row"><label>Satoshi</label><input id="conv-sat" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('sat')"></div>
-        <div class="conv-row"><label>mBTC</label><input id="conv-mbtc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('mbtc')"></div>
-        <div class="conv-row"><label>bits (μBTC)</label><input id="conv-bits" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('bits')"></div>
-        <div class="conv-row"><label>KRW (원)</label><input id="conv-krw" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('krw')"></div>
-        <div class="conv-row"><label>USD ($)</label><input id="conv-usd" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('usd')"></div>
+        <div class="conv-row"><label for="conv-btc">BTC</label><input id="conv-btc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('btc')"></div>
+        <div class="conv-row"><label for="conv-sat">Satoshi</label><input id="conv-sat" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('sat')"></div>
+        <div class="conv-row"><label for="conv-mbtc">mBTC</label><input id="conv-mbtc" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('mbtc')"></div>
+        <div class="conv-row"><label for="conv-bits">bits (μBTC)</label><input id="conv-bits" class="tool-input sm" type="number" placeholder="0.0" oninput="convertUnit('bits')"></div>
+        <div class="conv-row"><label for="conv-krw">KRW (원)</label><input id="conv-krw" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('krw')"></div>
+        <div class="conv-row"><label for="conv-usd">USD ($)</label><input id="conv-usd" class="tool-input sm" type="number" placeholder="0" oninput="convertUnit('usd')"></div>
         <div class="conv-price-info" id="conv-price-info">가격 로딩 중…</div>
       </div>
     </section>
@@ -117,11 +119,11 @@
     <!-- Bech32 인코딩/디코딩 -->
     <section class="tool-card" id="tool-bech32">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
         <h2>Bech32 / Base58 디코더</h2>
       </div>
       <div class="tool-body">
-        <input id="enc-input" class="tool-input" placeholder="주소 또는 hex 입력" spellcheck="false">
+        <input id="enc-input" class="tool-input" placeholder="주소 또는 hex 입력" aria-label="Bech32 또는 Base58 주소 입력" spellcheck="false">
         <div class="btn-row">
           <button class="tool-btn sm" onclick="decodeBech32()">Bech32 디코드</button>
           <button class="tool-btn sm" onclick="decodeBase58()">Base58 디코드</button>
@@ -133,11 +135,11 @@
     <!-- TX 브로드캐스트 -->
     <section class="tool-card" id="tool-broadcast">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <h2>TX 브로드캐스트</h2>
       </div>
       <div class="tool-body">
-        <textarea id="tx-hex" class="tool-input textarea" placeholder="서명된 트랜잭션 hex 붙여넣기" spellcheck="false" rows="4"></textarea>
+        <textarea id="tx-hex" class="tool-input textarea" placeholder="서명된 트랜잭션 hex 붙여넣기" aria-label="서명된 TX hex" spellcheck="false" rows="4"></textarea>
         <button class="tool-btn danger" onclick="broadcastTx()">네트워크에 전송</button>
         <div id="broadcast-result" class="tool-result"></div>
       </div>
@@ -146,11 +148,11 @@
     <!-- OP 코드 사전 -->
     <section class="tool-card" id="tool-opcodes">
       <div class="tool-header">
-        <svg class="tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         <h2>OP 코드 사전</h2>
       </div>
       <div class="tool-body">
-        <input id="op-search" class="tool-input" placeholder="OP_RETURN, 0x6a, 106..." oninput="searchOpcode(this.value)">
+        <input id="op-search" class="tool-input" placeholder="OP_RETURN, 0x6a, 106..." aria-label="OP 코드 검색" oninput="searchOpcode(this.value)">
         <div id="op-result" class="tool-result op-grid"></div>
       </div>
     </section>
@@ -173,9 +175,7 @@
 .learn-chip{color:var(--text2);text-decoration:none;padding:3px 10px;border:1px solid var(--border);border-radius:4px;font-family:var(--font-ko);font-size:.72rem;transition:all .15s;white-space:nowrap}
 .learn-chip:hover{border-color:var(--accent);color:var(--accent)}
 </style>
-<script>
-(function(){var o=setLang;setLang=function(l){o(l);var g=localStorage.getItem('lang')||'ko';document.querySelectorAll('#learn-links a[data-slug]').forEach(function(a){a.href='https://learn.txid.uk/'+g+'/blog/'+a.dataset.slug+'/';});};setLang(localStorage.getItem('lang')||'ko');})();
-</script>
+<script src="https://apps.txid.uk/learn-links.js"></script>
 
 <style>
 .appbar{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg2);position:fixed;bottom:0;left:0;right:0;z-index:90;backdrop-filter:blur(10px)}
@@ -189,7 +189,7 @@
 @media(max-width:600px){.nav-links{display:none;}}
 @media(max-width:768px){.appbar{display:none !important;}}
 </style>
-<div class="appbar"><a href="https://txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-ko="탐색기" data-en="Explorer" data-ja="探索">탐색기</span></a><a href="https://tools.txid.uk" class="active"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span data-ko="도구" data-en="Tools" data-ja="ツール">도구</span></a><a href="https://viz.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span data-ko="시각화" data-en="Viz" data-ja="可視化">시각화</span></a><a href="https://stats.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span data-ko="통계" data-en="Stats" data-ja="統計">통계</span></a><a href="https://nodes.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-ko="노드" data-en="Nodes" data-ja="ノード">노드</span></a><a href="https://map.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg><span data-ko="지도" data-en="Map" data-ja="地図">지도</span></a><a href="https://portfolio.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-ko="포트폴리오" data-en="Portfolio" data-ja="資産">포트폴리오</span></a><a href="https://tx.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span data-ko="전송" data-en="TX" data-ja="送金">전송</span></a><a href="https://learn.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span data-ko="배우기" data-en="Learn" data-ja="学習">배우기</span></a><a href="https://apps.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-ko="앱모음" data-en="Apps" data-ja="アプリ">앱모음</span></a></div>
+<div class="appbar"><a href="https://txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-ko="탐색기" data-en="Explorer" data-ja="探索">탐색기</span></a><a href="https://tools.txid.uk" class="active"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span data-ko="도구" data-en="Tools" data-ja="ツール">도구</span></a><a href="https://viz.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span data-ko="시각화" data-en="Viz" data-ja="可視化">시각화</span></a><a href="https://stats.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span data-ko="통계" data-en="Stats" data-ja="統計">통계</span></a><a href="https://nodes.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-ko="노드" data-en="Nodes" data-ja="ノード">노드</span></a><a href="https://map.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg><span data-ko="지도" data-en="Map" data-ja="地図">지도</span></a><a href="https://portfolio.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-ko="포트폴리오" data-en="Portfolio" data-ja="資産">포트폴리오</span></a><a href="https://tx.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span data-ko="전송" data-en="TX" data-ja="送金">전송</span></a><a href="https://learn.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span data-ko="배우기" data-en="Learn" data-ja="学習">배우기</span></a><a href="https://apps.txid.uk"><svg width="18" height="18" style="flex-shrink:0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-ko="앱모음" data-en="Apps" data-ja="アプリ">앱모음</span></a></div>
 <script src="https://api.txid.uk/txid-auth.js" crossorigin="anonymous" defer></script>
 <script data-goatcounter="https://txid.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>

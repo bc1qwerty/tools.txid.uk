@@ -1,3 +1,5 @@
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+async function fetchRetry(url,timeout,retries){for(let i=0,m=retries||2;i<=m;i++){try{return await fetch(url,{signal:AbortSignal.timeout(timeout||10000)});}catch(e){if(i>=m)throw e;await new Promise(r=>setTimeout(r,1000<<i));}}}
 'use strict';
 
 // ── 언어 ──
@@ -17,8 +19,8 @@ function setLang(l){
     if(val) el.textContent=val;
   });
 }
-function toggleLang(){document.getElementById('lang-menu')?.classList.toggle('open');}
-document.addEventListener('click',e=>{const m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown'))m.classList.remove('open');});
+function toggleLang(){const m=document.getElementById('lang-menu');m?.classList.toggle('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded',m?.classList.contains('open')||false);}
+document.addEventListener('click',e=>{const m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
 (function(){setLang(lang);})();
 
 const API = 'https://mempool.space/api';
@@ -112,14 +114,14 @@ let _btcKrw = null, _btcUsd = null;
 async function loadPrices() {
   try {
     const [upbit, binance] = await Promise.all([
-      fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC',{signal:AbortSignal.timeout(8000)}).then(r=>r.json()),
-      fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',{signal:AbortSignal.timeout(8000)}).then(r=>r.json())
+      fetchRetry('https://api.upbit.com/v1/ticker?markets=KRW-BTC',8000).then(r=>r.json()),
+      fetchRetry('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',8000).then(r=>r.json())
     ]);
     _btcKrw = upbit[0].trade_price;
     _btcUsd = parseFloat(binance.price);
     document.getElementById('conv-price-info').textContent =
       `1 BTC = ${_btcKrw.toLocaleString()}원 / $${_btcUsd.toLocaleString()}`;
-  } catch { document.getElementById('conv-price-info').textContent = '가격 로드 실패'; }
+  } catch(e) { console.error('loadPrices error:', e); document.getElementById('conv-price-info').innerHTML = '가격 로드 실패 <button onclick="loadPrices()" style="margin-left:8px;padding:2px 8px;font-size:.72rem;cursor:pointer">재시도</button>'; }
 }
 loadPrices();
 
@@ -188,12 +190,12 @@ async function broadcastTx() {
     const txid = await res.text();
     if (res.ok) {
       const isTxid=/^[0-9a-fA-F]{64}$/.test(txid.trim());
-      const txLink=isTxid?`<a href="https://txid.uk/#/tx/${txid.trim()}" style="color:var(--accent)" target="_blank">${txid.trim()}</a>`:txid.slice(0,200);
+      const txLink=isTxid?`<a href="https://txid.uk/#/tx/${txid.trim()}" style="color:var(--accent)" target="_blank">${txid.trim()}</a>`:escHtml(txid.slice(0,200));
       showResult('broadcast-result', `<span class="ok">✓ 브로드캐스트 성공!</span>\n` + row('TXID', txLink));
     } else {
-      showResult('broadcast-result', `<span class="err">❌ 오류: ${String(txid).replace(/</g,'&lt;').slice(0,300)}</span>`, true);
+      showResult('broadcast-result', `<span class="err">❌ 오류: ${escHtml(String(txid).slice(0,300))}</span>`, true);
     }
-  } catch (e) { showResult('broadcast-result', `<span class="err">네트워크 오류: ${e.message}</span>`, true); }
+  } catch (e) { console.error('broadcastTx error:', e); showResult('broadcast-result', '<span class="err">네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</span>', true); }
 }
 
 // ── OP 코드 사전 ──
