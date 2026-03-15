@@ -112,7 +112,7 @@ const T = {
 function t(key){ return (T[lang]&&T[lang][key]) || T.en[key] || key; }
 
 function setLang(l){
-  lang=l; localStorage.setItem('lang',lang);
+  lang=l; localStorage.setItem('lang',lang); document.documentElement.lang=lang;
   const btn=document.getElementById('lang-btn');
   if(btn) btn.textContent={ko:'KO',en:'EN',ja:'JA'}[lang]||'KO';
   document.getElementById('lang-menu')?.classList.remove('open');
