@@ -1,0 +1,59 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const site = 'https://tools.txid.uk';
+---
+
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <link rel="canonical" href={site + '/'}>
+  <link rel="alternate" hreflang="ko" href={site + '/'}>
+  <link rel="alternate" hreflang="en" href={site + '/'}>
+  <link rel="alternate" hreflang="ja" href={site + '/'}>
+  <link rel="alternate" hreflang="x-default" href={site + '/'}>
+  <meta name="keywords" content="bitcoin tools, address validator, script decoder, bech32, base58, OP_RETURN, 비트코인 도구">
+  <meta name="theme-color" content="#f7931a">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/icon-192.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:url" content={site + '/'}>
+  <meta property="og:image" content={site + '/og-image.png'}>
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@bc1qwerty">
+  <meta name="twitter:title" content={title}>
+  <meta name="twitter:description" content={description}>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Bitcoin Tools",
+    "url": site,
+    "description": "Bitcoin developer tools: address validator, script decoder, Bech32, unit converter",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  })} />
+  <script src="https://apps.txid.uk/global-nav.js" crossorigin="anonymous" defer is:inline></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">본문으로 건너뛰기</a>
+  <slot />
+  <script src="https://apps.txid.uk/learn-links.js" is:inline></script>
+  <script data-goatcounter="https://txid.goatcounter.com/count" src="https://gc.zgo.at/count.js" async is:inline></script>
+  <script src="https://api.txid.uk/txid-auth.js" crossorigin="anonymous" defer is:inline></script>
+</body>
+</html>
