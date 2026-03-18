@@ -670,7 +670,10 @@ import '../styles/global.css';
       el.className = 'tool-result show' + (isError ? ' err' : '');
     }
     function row(key, val) {
-      return `<div><span class="key">${key}:</span> <span class="val">${val}</span></div>`;
+      return `<div><span class="key">${escHtml(key)}:</span> <span class="val">${escHtml(val)}</span></div>`;
+    }
+    function rowHtml(key, valHtml) {
+      return `<div><span class="key">${escHtml(key)}:</span> <span class="val">${valHtml}</span></div>`;
     }
 
     // ── 주소 분석 ──
@@ -689,10 +692,10 @@ import '../styles/global.css';
       if (!valid) { showResult('addr-result', `<span class="err">${t('invalid_addr')}</span>`, true); return; }
 
       const html = `<span class="ok">${t('valid_addr')}</span>\n` +
-        row(t('type'), `<span class="accent">${type}</span>`) +
+        rowHtml(t('type'), `<span class="accent">${escHtml(type)}</span>`) +
         row(t('network'), network) +
         row(t('length'), addr.length + ' ' + t('length_chars')) +
-        `<div class="mt-10"><a href="https://txid.uk/#/address/${addr}" class="explorer-link">${t('view_explorer')}</a></div>`;
+        `<div class="mt-10"><a href="https://txid.uk/#/address/${encodeURIComponent(addr)}" class="explorer-link">${t('view_explorer')}</a></div>`;
       showResult('addr-result', html);
     }
     document.getElementById('addr-input').addEventListener('keydown', e => { if (e.key === 'Enter') analyzeAddress(); });
@@ -798,7 +801,7 @@ import '../styles/global.css';
       const hex = n.toString(16).padStart(50, '0').slice(-50);
       const version = hex.slice(0, 2);
       const versionNames = { '00': t('p2pkh_mainnet'), '05': t('p2sh_mainnet'), '6f': t('p2pkh_testnet'), '80': t('wif_privkey'), '0488b21e': 'xpub', '0488ade4': 'xprv' };
-      const html = row('Hex', `<span class="word-break-all">${hex}</span>`) +
+      const html = rowHtml('Hex', `<span class="word-break-all">${escHtml(hex)}</span>`) +
         row('Version byte', '0x' + version) +
         row(t('type'), versionNames[version] || t('unknown')) +
         row('Payload', hex.slice(2, -8)) +
@@ -862,9 +865,9 @@ import '../styles/global.css';
       if (!list.length) { el.innerHTML = `<div class="no-results">${t('no_search_result')}</div>`; el.className='tool-result show'; return; }
       el.innerHTML = list.map(op => `
         <div class="op-item">
-          <div class="op-name">${op.name}</div>
-          <div class="op-hex">${op.hex} (${op.dec})</div>
-          <div class="op-desc">${t(op.descKey)}</div>
+          <div class="op-name">${escHtml(op.name)}</div>
+          <div class="op-hex">${escHtml(op.hex)} (${escHtml(String(op.dec))})</div>
+          <div class="op-desc">${escHtml(t(op.descKey))}</div>
         </div>`).join('');
       el.className = 'tool-result show op-grid';
     }
