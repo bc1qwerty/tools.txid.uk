@@ -1,0 +1,873 @@
+<!-- Script IDE Tool -->
+<section class="tool-card tool-card--wide" id="tool-script-ide">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    <h2 data-ko="Script IDE" data-en="Script IDE" data-ja="Script IDE">Script IDE</h2>
+  </div>
+  <div class="tool-body">
+    <!-- Template selector -->
+    <div class="ide-toolbar">
+      <label class="ide-label" for="ide-template" data-ko="템플릿" data-en="Template" data-ja="テンプレート">템플릿</label>
+      <select id="ide-template" class="ide-select">
+        <option value="" data-ko="— 선택 —" data-en="— Select —" data-ja="— 選択 —">— 선택 —</option>
+        <option value="p2pkh">P2PKH</option>
+        <option value="p2sh">P2SH</option>
+        <option value="multisig">Multisig (2-of-3)</option>
+        <option value="timelock" data-ko="타임락" data-en="Time-locked" data-ja="タイムロック">타임락</option>
+        <option value="opreturn">OP_RETURN</option>
+        <option value="math" data-ko="산술 예제" data-en="Math Example" data-ja="算術の例">산술 예제</option>
+      </select>
+      <div class="ide-toolbar-right">
+        <button class="tool-btn sm ide-btn" id="btn-ide-run" data-ko="실행" data-en="Run" data-ja="実行">실행</button>
+        <button class="tool-btn sm ide-btn ide-btn-step" id="btn-ide-step" data-ko="스텝" data-en="Step" data-ja="ステップ">스텝</button>
+        <button class="tool-btn sm ide-btn ide-btn-back" id="btn-ide-back" data-ko="뒤로" data-en="Back" data-ja="戻る">뒤로</button>
+        <button class="tool-btn sm ide-btn ide-btn-reset" id="btn-ide-reset" data-ko="초기화" data-en="Reset" data-ja="リセット">초기화</button>
+      </div>
+    </div>
+
+    <div class="ide-main">
+      <!-- Editor pane -->
+      <div class="ide-editor-pane">
+        <div class="ide-editor-label" data-ko="스크립트 에디터" data-en="Script Editor" data-ja="スクリプトエディタ">스크립트 에디터</div>
+        <div class="ide-editor-wrap" id="ide-editor-wrap">
+          <div class="ide-line-numbers" id="ide-line-numbers" aria-hidden="true">1</div>
+          <div class="ide-editor-container">
+            <pre class="ide-highlight" id="ide-highlight" aria-hidden="true"></pre>
+            <textarea id="ide-editor" class="ide-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" rows="12"
+              placeholder="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+              data-ko="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+              data-en="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+              data-ja="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+              aria-label="Bitcoin Script editor"></textarea>
+            <div class="ide-autocomplete" id="ide-autocomplete" role="listbox" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stack visualizer -->
+      <div class="ide-stack-pane">
+        <div class="ide-editor-label" data-ko="스택 시각화" data-en="Stack Visualizer" data-ja="スタック可視化">스택 시각화</div>
+        <div class="ide-stack-info">
+          <span class="ide-stack-step" id="ide-step-info" data-ko="대기 중" data-en="Waiting" data-ja="待機中">대기 중</span>
+        </div>
+        <div class="ide-stack-visual" id="ide-stack-visual">
+          <div class="ide-stack-empty" data-ko="스택이 비어 있습니다" data-en="Stack is empty" data-ja="スタックが空です">스택이 비어 있습니다</div>
+        </div>
+        <div class="ide-result" id="ide-result"></div>
+      </div>
+    </div>
+
+    <!-- OP code quick ref toggle -->
+    <details class="ide-ref-details">
+      <summary class="ide-ref-summary" data-ko="OP 코드 빠른 참조" data-en="OP Code Quick Reference" data-ja="OPコード クイックリファレンス">OP 코드 빠른 참조</summary>
+      <div class="ide-ref-grid" id="ide-ref-grid"></div>
+    </details>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  'use strict';
+
+  // -- Opcode database --
+  var OP_CATS = { stack:'stack', crypto:'crypto', arith:'arith', logic:'logic', flow:'flow', const:'const', disabled:'disabled' };
+  var ALL_OPS = [
+    // Constants
+    {name:'OP_0',aliases:['OP_FALSE','0','FALSE'],cat:'const',desc:{ko:'0을 스택에 푸시',en:'Push 0 onto stack',ja:'0をスタックにプッシュ'},hex:'0x00'},
+    {name:'OP_1',aliases:['OP_TRUE','1','TRUE'],cat:'const',desc:{ko:'1을 스택에 푸시',en:'Push 1 onto stack',ja:'1をスタックにプッシュ'},hex:'0x51'},
+    {name:'OP_2',aliases:['2'],cat:'const',desc:{ko:'2를 스택에 푸시',en:'Push 2',ja:'2をプッシュ'},hex:'0x52'},
+    {name:'OP_3',aliases:['3'],cat:'const',desc:{ko:'3을 스택에 푸시',en:'Push 3',ja:'3をプッシュ'},hex:'0x53'},
+    {name:'OP_4',aliases:['4'],cat:'const',desc:{ko:'4를 스택에 푸시',en:'Push 4',ja:'4をプッシュ'},hex:'0x54'},
+    {name:'OP_5',aliases:['5'],cat:'const',desc:{ko:'5를 스택에 푸시',en:'Push 5',ja:'5をプッシュ'},hex:'0x55'},
+    {name:'OP_6',aliases:['6'],cat:'const',desc:{ko:'6을 스택에 푸시',en:'Push 6',ja:'6をプッシュ'},hex:'0x56'},
+    {name:'OP_7',aliases:['7'],cat:'const',desc:{ko:'7을 스택에 푸시',en:'Push 7',ja:'7をプッシュ'},hex:'0x57'},
+    {name:'OP_8',aliases:['8'],cat:'const',desc:{ko:'8을 스택에 푸시',en:'Push 8',ja:'8をプッシュ'},hex:'0x58'},
+    {name:'OP_9',aliases:['9'],cat:'const',desc:{ko:'9를 스택에 푸시',en:'Push 9',ja:'9をプッシュ'},hex:'0x59'},
+    {name:'OP_10',aliases:['10'],cat:'const',desc:{ko:'10을 스택에 푸시',en:'Push 10',ja:'10をプッシュ'},hex:'0x5a'},
+    {name:'OP_11',aliases:['11'],cat:'const',desc:{ko:'11을 스택에 푸시',en:'Push 11',ja:'11をプッシュ'},hex:'0x5b'},
+    {name:'OP_12',aliases:['12'],cat:'const',desc:{ko:'12를 스택에 푸시',en:'Push 12',ja:'12をプッシュ'},hex:'0x5c'},
+    {name:'OP_13',aliases:['13'],cat:'const',desc:{ko:'13을 스택에 푸시',en:'Push 13',ja:'13をプッシュ'},hex:'0x5d'},
+    {name:'OP_14',aliases:['14'],cat:'const',desc:{ko:'14를 스택에 푸시',en:'Push 14',ja:'14をプッシュ'},hex:'0x5e'},
+    {name:'OP_15',aliases:['15'],cat:'const',desc:{ko:'15를 스택에 푸시',en:'Push 15',ja:'15をプッシュ'},hex:'0x5f'},
+    {name:'OP_16',aliases:['16'],cat:'const',desc:{ko:'16을 스택에 푸시',en:'Push 16',ja:'16をプッシュ'},hex:'0x60'},
+    // Stack
+    {name:'OP_DUP',aliases:[],cat:'stack',desc:{ko:'스택 최상위 복제',en:'Duplicate top item',ja:'スタックトップを複製'},hex:'0x76'},
+    {name:'OP_DROP',aliases:[],cat:'stack',desc:{ko:'스택 최상위 제거',en:'Remove top item',ja:'スタックトップを削除'},hex:'0x75'},
+    {name:'OP_SWAP',aliases:[],cat:'stack',desc:{ko:'상위 2개 교환',en:'Swap top two items',ja:'上位2つを交換'},hex:'0x7c'},
+    {name:'OP_OVER',aliases:[],cat:'stack',desc:{ko:'두 번째 항목 복사',en:'Copy second item to top',ja:'2番目を上にコピー'},hex:'0x78'},
+    {name:'OP_ROT',aliases:[],cat:'stack',desc:{ko:'상위 3개 회전',en:'Rotate top three items',ja:'上位3つを回転'},hex:'0x7b'},
+    {name:'OP_2DUP',aliases:[],cat:'stack',desc:{ko:'상위 2개 복제',en:'Duplicate top two items',ja:'上位2つを複製'},hex:'0x6e'},
+    {name:'OP_PICK',aliases:[],cat:'stack',desc:{ko:'n번째 항목 복사',en:'Copy nth item to top',ja:'n番目をトップにコピー'},hex:'0x79'},
+    {name:'OP_ROLL',aliases:[],cat:'stack',desc:{ko:'n번째 항목을 맨 위로',en:'Move nth item to top',ja:'n番目をトップに移動'},hex:'0x7a'},
+    // Arithmetic
+    {name:'OP_ADD',aliases:[],cat:'arith',desc:{ko:'a + b',en:'a + b',ja:'a + b'},hex:'0x93'},
+    {name:'OP_SUB',aliases:[],cat:'arith',desc:{ko:'a - b',en:'a - b',ja:'a - b'},hex:'0x94'},
+    {name:'OP_MUL',aliases:[],cat:'disabled',desc:{ko:'a * b (비활성화됨)',en:'a * b (disabled)',ja:'a * b (無効)'},hex:'0x95'},
+    {name:'OP_1ADD',aliases:[],cat:'arith',desc:{ko:'a + 1',en:'a + 1',ja:'a + 1'},hex:'0x8b'},
+    {name:'OP_1SUB',aliases:[],cat:'arith',desc:{ko:'a - 1',en:'a - 1',ja:'a - 1'},hex:'0x8c'},
+    {name:'OP_NEGATE',aliases:[],cat:'arith',desc:{ko:'부호 반전',en:'Negate',ja:'符号反転'},hex:'0x8f'},
+    {name:'OP_ABS',aliases:[],cat:'arith',desc:{ko:'절대값',en:'Absolute value',ja:'絶対値'},hex:'0x90'},
+    // Logic
+    {name:'OP_EQUAL',aliases:[],cat:'logic',desc:{ko:'a == b → 1 또는 0',en:'a == b → 1 or 0',ja:'a == b → 1 または 0'},hex:'0x87'},
+    {name:'OP_EQUALVERIFY',aliases:[],cat:'logic',desc:{ko:'EQUAL + VERIFY',en:'EQUAL + VERIFY',ja:'EQUAL + VERIFY'},hex:'0x88'},
+    {name:'OP_NOT',aliases:[],cat:'logic',desc:{ko:'0이면 1, 아니면 0',en:'If 0 → 1, else → 0',ja:'0なら1、それ以外は0'},hex:'0x91'},
+    {name:'OP_0NOTEQUAL',aliases:[],cat:'logic',desc:{ko:'0이 아니면 1',en:'Returns 1 if not 0',ja:'0でなければ1'},hex:'0x92'},
+    {name:'OP_NUMEQUAL',aliases:[],cat:'logic',desc:{ko:'숫자 비교 (같으면 1)',en:'Numeric equal',ja:'数値比較 (等しければ1)'},hex:'0x9c'},
+    {name:'OP_LESSTHAN',aliases:[],cat:'logic',desc:{ko:'a < b',en:'a < b',ja:'a < b'},hex:'0x9f'},
+    {name:'OP_GREATERTHAN',aliases:[],cat:'logic',desc:{ko:'a > b',en:'a > b',ja:'a > b'},hex:'0xa0'},
+    // Crypto
+    {name:'OP_HASH160',aliases:[],cat:'crypto',desc:{ko:'RIPEMD160(SHA256(x))',en:'RIPEMD160(SHA256(x))',ja:'RIPEMD160(SHA256(x))'},hex:'0xa9'},
+    {name:'OP_HASH256',aliases:[],cat:'crypto',desc:{ko:'SHA256(SHA256(x))',en:'SHA256(SHA256(x))',ja:'SHA256(SHA256(x))'},hex:'0xaa'},
+    {name:'OP_SHA256',aliases:[],cat:'crypto',desc:{ko:'SHA-256 해시',en:'SHA-256 hash',ja:'SHA-256ハッシュ'},hex:'0xa8'},
+    {name:'OP_RIPEMD160',aliases:[],cat:'crypto',desc:{ko:'RIPEMD-160 해시',en:'RIPEMD-160 hash',ja:'RIPEMD-160ハッシュ'},hex:'0xa6'},
+    {name:'OP_CHECKSIG',aliases:[],cat:'crypto',desc:{ko:'서명 검증 (시뮬레이션)',en:'Verify signature (simulated)',ja:'署名検証 (シミュレーション)'},hex:'0xac'},
+    {name:'OP_CHECKMULTISIG',aliases:[],cat:'crypto',desc:{ko:'다중 서명 검증 (시뮬레이션)',en:'Multi-signature verify (simulated)',ja:'マルチシグ検証 (シミュレーション)'},hex:'0xae'},
+    {name:'OP_CHECKSIGADD',aliases:[],cat:'crypto',desc:{ko:'서명 검증 후 카운터 증가 (Tapscript)',en:'Verify sig and increment counter (Tapscript)',ja:'署名検証後カウンタ増加 (Tapscript)'},hex:'0xba'},
+    {name:'OP_CHECKLOCKTIMEVERIFY',aliases:['OP_CLTV'],cat:'flow',desc:{ko:'절대 타임락 검증',en:'Absolute timelock verify',ja:'絶対タイムロック検証'},hex:'0xb1'},
+    {name:'OP_CHECKSEQUENCEVERIFY',aliases:['OP_CSV'],cat:'flow',desc:{ko:'상대 타임락 검증',en:'Relative timelock verify',ja:'相対タイムロック検証'},hex:'0xb2'},
+    {name:'OP_NOP',aliases:[],cat:'flow',desc:{ko:'아무 동작 없음',en:'No operation',ja:'操作なし'},hex:'0x61'},
+    {name:'OP_CODESEPARATOR',aliases:[],cat:'flow',desc:{ko:'서명 해싱 구분자',en:'Signature hashing separator',ja:'署名ハッシング区切り'},hex:'0xab'},
+    // Flow
+    {name:'OP_IF',aliases:[],cat:'flow',desc:{ko:'조건이 TRUE이면 실행',en:'Execute if TRUE',ja:'TRUEなら実行'},hex:'0x63'},
+    {name:'OP_ELSE',aliases:[],cat:'flow',desc:{ko:'IF가 FALSE일 때 실행',en:'Execute if IF was FALSE',ja:'IFがFALSEのとき実行'},hex:'0x67'},
+    {name:'OP_ENDIF',aliases:[],cat:'flow',desc:{ko:'IF 블록 종료',en:'End IF block',ja:'IFブロック終了'},hex:'0x68'},
+    {name:'OP_VERIFY',aliases:[],cat:'flow',desc:{ko:'FALSE이면 스크립트 실패',en:'Fail if FALSE',ja:'FALSEならスクリプト失敗'},hex:'0x69'},
+    {name:'OP_RETURN',aliases:[],cat:'flow',desc:{ko:'스크립트를 즉시 실패',en:'Immediately fail script',ja:'スクリプトを即失敗'},hex:'0x6a'},
+  ];
+
+  // Build lookup
+  var OP_MAP = {};
+  ALL_OPS.forEach(function(op) {
+    OP_MAP[op.name] = op;
+    (op.aliases||[]).forEach(function(a) { OP_MAP[a] = op; });
+  });
+
+  // -- Templates --
+  var IDE_TEMPLATES = {
+    p2pkh: '# P2PKH (Pay-to-Public-Key-Hash)\n# scriptSig (unlocking):\n<sig>\n<pubkey>\n# scriptPubKey (locking):\nOP_DUP\nOP_HASH160\n<pubkeyhash>\nOP_EQUALVERIFY\nOP_CHECKSIG',
+    p2sh: '# P2SH (Pay-to-Script-Hash)\n# Simplified example\nOP_HASH160\n<scripthash>\nOP_EQUAL',
+    multisig: '# Multisig 2-of-3\nOP_0\n<sig1>\n<sig2>\nOP_2\n<pubkey1>\n<pubkey2>\n<pubkey3>\nOP_3\nOP_CHECKMULTISIG',
+    timelock: '# Time-locked Script\n<locktime>\nOP_CHECKLOCKTIMEVERIFY\nOP_DROP\n<pubkey>\nOP_CHECKSIG',
+    opreturn: '# OP_RETURN (Data embedding)\nOP_RETURN\n48656c6c6f20426974636f696e21',
+    math: '# Math Example\n# Push 3 and 4, add them, check if equal to 7\nOP_3\nOP_4\nOP_ADD\nOP_7\nOP_EQUAL',
+  };
+
+  // -- State --
+  var ideState = {
+    instructions: [],
+    stack: [],
+    pc: 0,
+    history: [],
+    running: false,
+    error: null,
+    ifStack: [],
+  };
+
+  // -- DOM refs --
+  var $editor = document.getElementById('ide-editor');
+  var $highlight = document.getElementById('ide-highlight');
+  var $lineNums = document.getElementById('ide-line-numbers');
+  var $stackVisual = document.getElementById('ide-stack-visual');
+  var $stepInfo = document.getElementById('ide-step-info');
+  var $result = document.getElementById('ide-result');
+  var $autocomplete = document.getElementById('ide-autocomplete');
+  var $template = document.getElementById('ide-template');
+  var $refGrid = document.getElementById('ide-ref-grid');
+
+  // -- Parse script text into instructions --
+  function parseScript(text) {
+    var lines = text.split('\n');
+    var instructions = [];
+    lines.forEach(function(line, lineIdx) {
+      var trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) return;
+      var tokens = trimmed.split(/\s+/);
+      tokens.forEach(function(token) {
+        if (!token) return;
+        instructions.push({ token: token.toUpperCase(), original: token, line: lineIdx });
+      });
+    });
+    return instructions;
+  }
+
+  // -- Classify a token --
+  function classifyToken(token) {
+    var upper = token.toUpperCase();
+    if (upper.startsWith('#')) return 'comment';
+    if (OP_MAP[upper]) return OP_MAP[upper].cat;
+    if (/^[0-9a-fA-F]+$/.test(token) && token.length % 2 === 0 && token.length >= 2) return 'data';
+    if (token.startsWith('<') && token.endsWith('>')) return 'data';
+    return 'error';
+  }
+
+  // -- Syntax highlight --
+  function updateHighlight() {
+    var text = $editor.value;
+    var lines = text.split('\n');
+    var highlighted = lines.map(function(line) {
+      if (!line.trim()) return '\n';
+      if (line.trim().startsWith('#')) return '<span class="ide-hl-comment">' + escHtml(line) + '</span>\n';
+      return line.replace(/(\S+)/g, function(match) {
+        var cat = classifyToken(match);
+        var cls = 'ide-hl-' + cat;
+        return '<span class="' + cls + '">' + escHtml(match) + '</span>';
+      }) + '\n';
+    });
+    $highlight.innerHTML = highlighted.join('');
+  }
+
+  // -- Line numbers --
+  function updateLineNumbers() {
+    var lines = $editor.value.split('\n');
+    var nums = [];
+    for (var i = 1; i <= lines.length; i++) {
+      var cls = '';
+      if (ideState.running && ideState.pc < ideState.instructions.length) {
+        if (ideState.instructions[ideState.pc].line === i - 1) cls = ' class="ide-ln-active"';
+      }
+      nums.push('<div' + cls + '>' + i + '</div>');
+    }
+    $lineNums.innerHTML = nums.join('');
+  }
+
+  // -- Sync scroll --
+  function syncScroll() {
+    $highlight.scrollTop = $editor.scrollTop;
+    $highlight.scrollLeft = $editor.scrollLeft;
+  }
+
+  // -- Stack value helpers --
+  function stackValToNum(val) {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'boolean') return val ? 1 : 0;
+    if (typeof val === 'string') {
+      if (/^[0-9a-fA-F]+$/.test(val) && val.length <= 8) return parseInt(val, 16);
+      return NaN;
+    }
+    return NaN;
+  }
+  function stackValDisplay(val) {
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+    if (typeof val === 'string') {
+      if (val.length > 16) return val.slice(0, 6) + '...' + val.slice(-6);
+      return val;
+    }
+    return String(val);
+  }
+  function stackValType(val) {
+    if (typeof val === 'number') return t('ide_num');
+    if (typeof val === 'boolean') return 'bool';
+    if (typeof val === 'string') return t('ide_hex');
+    return '';
+  }
+  function isTruthy(val) {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'number') return val !== 0;
+    if (typeof val === 'string') return val.length > 0 && !/^0+$/.test(val);
+    return false;
+  }
+
+  // -- Render stack --
+  function renderStack(animate) {
+    if (ideState.stack.length === 0) {
+      $stackVisual.innerHTML = '<div class="ide-stack-empty">' + t('ide_stack_empty') + '</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < ideState.stack.length; i++) {
+      var val = ideState.stack[i];
+      var isNew = animate && i === ideState.stack.length - 1;
+      html += '<div class="ide-stack-item' + (isNew ? ' ide-stack-item--new' : '') + '">' +
+        '<span class="ide-si-idx">' + i + '</span>' +
+        '<span class="ide-si-val">' + escHtml(stackValDisplay(val)) + '</span>' +
+        '<span class="ide-si-type">' + stackValType(val) + '</span>' +
+        '</div>';
+    }
+    $stackVisual.innerHTML = html;
+  }
+
+  // -- Render step info --
+  function renderStepInfo() {
+    if (!ideState.running) {
+      $stepInfo.textContent = t('ide_waiting');
+      return;
+    }
+    if (ideState.pc >= ideState.instructions.length) {
+      $stepInfo.textContent = t('ide_done') + ' — ' + t('ide_completed_steps').replace('{n}', ideState.pc);
+      return;
+    }
+    var instr = ideState.instructions[ideState.pc];
+    $stepInfo.textContent = t('ide_step_of') + ' ' + (ideState.pc + 1) + '/' + ideState.instructions.length + ': ' + instr.original;
+  }
+
+  // -- Show result --
+  function showIdeResult(msg, type) {
+    $result.textContent = msg;
+    $result.className = 'ide-result ide-result--' + type;
+    $result.style.display = 'block';
+  }
+  function hideIdeResult() {
+    $result.style.display = 'none';
+  }
+
+  // -- Simple hash simulation --
+  function simHash(data, algo) {
+    var str = typeof data === 'number' ? data.toString(16) : String(data);
+    var h = 0;
+    for (var i = 0; i < str.length; i++) {
+      h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+    }
+    var hex = Math.abs(h).toString(16).padStart(8, '0');
+    switch (algo) {
+      case 'sha256': return hex.repeat(8).slice(0, 64);
+      case 'hash256': return hex.repeat(8).slice(0, 64);
+      case 'ripemd160': return hex.repeat(5).slice(0, 40);
+      case 'hash160': return hex.repeat(5).slice(0, 40);
+      default: return hex;
+    }
+  }
+
+  // -- Execute a single instruction --
+  function execOne(instr, stack, ifStack) {
+    var tok = instr.token;
+    var op = OP_MAP[tok];
+
+    if (!op) {
+      if (/^[0-9A-F]+$/.test(tok) && tok.length % 2 === 0 && tok.length >= 2) {
+        if (stack.length >= 1000) return t('ide_stack_overflow');
+        stack.push(tok.toLowerCase());
+        return null;
+      }
+      if (tok.startsWith('<') && tok.endsWith('>')) {
+        stack.push(tok.toLowerCase());
+        return null;
+      }
+      return t('ide_unknown_op') + ': ' + instr.original;
+    }
+
+    if (op.cat === 'disabled') return t('ide_disabled_op') + ': ' + op.name;
+
+    var a, b, c, n;
+
+    switch (op.name) {
+      case 'OP_0': stack.push(0); break;
+      case 'OP_1': stack.push(1); break;
+      case 'OP_2': stack.push(2); break;
+      case 'OP_3': stack.push(3); break;
+      case 'OP_4': stack.push(4); break;
+      case 'OP_5': stack.push(5); break;
+      case 'OP_6': stack.push(6); break;
+      case 'OP_7': stack.push(7); break;
+      case 'OP_8': stack.push(8); break;
+      case 'OP_9': stack.push(9); break;
+      case 'OP_10': stack.push(10); break;
+      case 'OP_11': stack.push(11); break;
+      case 'OP_12': stack.push(12); break;
+      case 'OP_13': stack.push(13); break;
+      case 'OP_14': stack.push(14); break;
+      case 'OP_15': stack.push(15); break;
+      case 'OP_16': stack.push(16); break;
+
+      case 'OP_DUP':
+        if (stack.length < 1) return t('ide_insufficient');
+        stack.push(stack[stack.length - 1]);
+        break;
+      case 'OP_DROP':
+        if (stack.length < 1) return t('ide_insufficient');
+        stack.pop();
+        break;
+      case 'OP_SWAP':
+        if (stack.length < 2) return t('ide_insufficient');
+        a = stack[stack.length - 1]; stack[stack.length - 1] = stack[stack.length - 2]; stack[stack.length - 2] = a;
+        break;
+      case 'OP_OVER':
+        if (stack.length < 2) return t('ide_insufficient');
+        stack.push(stack[stack.length - 2]);
+        break;
+      case 'OP_ROT':
+        if (stack.length < 3) return t('ide_insufficient');
+        a = stack.splice(stack.length - 3, 1)[0];
+        stack.push(a);
+        break;
+      case 'OP_2DUP':
+        if (stack.length < 2) return t('ide_insufficient');
+        stack.push(stack[stack.length - 2], stack[stack.length - 1]);
+        break;
+      case 'OP_PICK':
+        if (stack.length < 1) return t('ide_insufficient');
+        n = stackValToNum(stack.pop());
+        if (isNaN(n) || n < 0 || n >= stack.length) return t('ide_insufficient');
+        stack.push(stack[stack.length - 1 - n]);
+        break;
+      case 'OP_ROLL':
+        if (stack.length < 1) return t('ide_insufficient');
+        n = stackValToNum(stack.pop());
+        if (isNaN(n) || n < 0 || n >= stack.length) return t('ide_insufficient');
+        a = stack.splice(stack.length - 1 - n, 1)[0];
+        stack.push(a);
+        break;
+
+      case 'OP_ADD':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+        stack.push(a + b);
+        break;
+      case 'OP_SUB':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+        stack.push(a - b);
+        break;
+      case 'OP_1ADD':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stackValToNum(stack.pop()); stack.push(a + 1);
+        break;
+      case 'OP_1SUB':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stackValToNum(stack.pop()); stack.push(a - 1);
+        break;
+      case 'OP_NEGATE':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stackValToNum(stack.pop()); stack.push(-a);
+        break;
+      case 'OP_ABS':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stackValToNum(stack.pop()); stack.push(Math.abs(a));
+        break;
+
+      case 'OP_EQUAL':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stack.pop(); a = stack.pop();
+        stack.push(String(a) === String(b) ? 1 : 0);
+        break;
+      case 'OP_EQUALVERIFY':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stack.pop(); a = stack.pop();
+        if (String(a) !== String(b)) return t('ide_verify_fail');
+        break;
+      case 'OP_NOT':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop();
+        stack.push(isTruthy(a) ? 0 : 1);
+        break;
+      case 'OP_0NOTEQUAL':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop();
+        stack.push(isTruthy(a) ? 1 : 0);
+        break;
+      case 'OP_NUMEQUAL':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+        stack.push(a === b ? 1 : 0);
+        break;
+      case 'OP_LESSTHAN':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+        stack.push(a < b ? 1 : 0);
+        break;
+      case 'OP_GREATERTHAN':
+        if (stack.length < 2) return t('ide_insufficient');
+        b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+        stack.push(a > b ? 1 : 0);
+        break;
+
+      case 'OP_SHA256':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop(); stack.push(simHash(a, 'sha256'));
+        break;
+      case 'OP_HASH256':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop(); stack.push(simHash(a, 'hash256'));
+        break;
+      case 'OP_RIPEMD160':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop(); stack.push(simHash(a, 'ripemd160'));
+        break;
+      case 'OP_HASH160':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop(); stack.push(simHash(a, 'hash160'));
+        break;
+      case 'OP_CHECKSIG':
+        if (stack.length < 2) return t('ide_insufficient');
+        stack.pop(); stack.pop();
+        stack.push(1);
+        break;
+
+      case 'OP_VERIFY':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop();
+        if (!isTruthy(a)) return t('ide_verify_fail');
+        break;
+      case 'OP_RETURN':
+        return 'OP_RETURN';
+      case 'OP_IF':
+        if (stack.length < 1) return t('ide_insufficient');
+        a = stack.pop();
+        ifStack.push(isTruthy(a));
+        break;
+      case 'OP_ELSE':
+        if (ifStack.length < 1) return t('ide_else_no_if');
+        ifStack[ifStack.length - 1] = !ifStack[ifStack.length - 1];
+        break;
+      case 'OP_ENDIF':
+        if (ifStack.length < 1) return t('ide_endif_no_if');
+        ifStack.pop();
+        break;
+
+      case 'OP_CHECKLOCKTIMEVERIFY':
+      case 'OP_CHECKSEQUENCEVERIFY':
+        if (stack.length < 1) return t('ide_insufficient');
+        break;
+
+      case 'OP_CHECKMULTISIG':
+        if (stack.length < 1) return t('ide_insufficient');
+        n = stackValToNum(stack.pop());
+        if (stack.length < n) return t('ide_insufficient');
+        for (var pk = 0; pk < n; pk++) stack.pop();
+        if (stack.length < 1) return t('ide_insufficient');
+        var m = stackValToNum(stack.pop());
+        if (stack.length < m) return t('ide_insufficient');
+        for (var sg = 0; sg < m; sg++) stack.pop();
+        if (stack.length > 0) stack.pop();
+        stack.push(1);
+        break;
+
+      case 'OP_NOP':
+        break;
+      case 'OP_CODESEPARATOR':
+        break;
+      case 'OP_CHECKSIGADD':
+        if (stack.length < 3) return t('ide_insufficient');
+        a = stack.pop();
+        b = stackValToNum(stack.pop());
+        c = stack.pop();
+        stack.push(b + 1);
+        break;
+
+      default:
+        return t('ide_unknown_op') + ': ' + op.name;
+    }
+
+    if (stack.length > 1000) return t('ide_stack_overflow');
+    return null;
+  }
+
+  // -- Reset IDE state --
+  function ideReset() {
+    ideState.instructions = [];
+    ideState.stack = [];
+    ideState.pc = 0;
+    ideState.history = [];
+    ideState.running = false;
+    ideState.error = null;
+    ideState.ifStack = [];
+    renderStack(false);
+    renderStepInfo();
+    hideIdeResult();
+    updateLineNumbers();
+  }
+
+  // -- Start execution --
+  function ideStart() {
+    ideState.instructions = parseScript($editor.value);
+    ideState.stack = [];
+    ideState.pc = 0;
+    ideState.history = [];
+    ideState.running = true;
+    ideState.error = null;
+    ideState.ifStack = [];
+  }
+
+  // -- Step forward --
+  function ideStep() {
+    if (!ideState.running) {
+      ideStart();
+      if (ideState.instructions.length === 0) {
+        ideState.running = false;
+        renderStepInfo();
+        return;
+      }
+    }
+    if (ideState.pc >= ideState.instructions.length) {
+      ideFinalResult();
+      return;
+    }
+    ideState.history.push({
+      stack: ideState.stack.slice(),
+      pc: ideState.pc,
+      ifStack: ideState.ifStack.slice()
+    });
+
+    var instr = ideState.instructions[ideState.pc];
+
+    if (ideState.ifStack.length > 0 && !ideState.ifStack[ideState.ifStack.length - 1]) {
+      if (instr.token === 'OP_IF') {
+        ideState.ifStack.push(false);
+      } else if (instr.token === 'OP_ELSE') {
+        if (ideState.ifStack.length > 0) ideState.ifStack[ideState.ifStack.length - 1] = !ideState.ifStack[ideState.ifStack.length - 1];
+      } else if (instr.token === 'OP_ENDIF') {
+        if (ideState.ifStack.length > 0) ideState.ifStack.pop();
+      }
+      ideState.pc++;
+      renderStack(false);
+      renderStepInfo();
+      updateLineNumbers();
+      if (ideState.pc >= ideState.instructions.length) ideFinalResult();
+      return;
+    }
+
+    var err = execOne(instr, ideState.stack, ideState.ifStack);
+    ideState.pc++;
+
+    if (err) {
+      ideState.error = err;
+      showIdeResult(t('ide_error_at').replace('{line}', instr.line + 1).replace('{msg}', err), 'fail');
+      ideState.running = false;
+    }
+
+    renderStack(true);
+    renderStepInfo();
+    updateLineNumbers();
+
+    if (!err && ideState.pc >= ideState.instructions.length) {
+      ideFinalResult();
+    }
+  }
+
+  // -- Step backward --
+  function ideBack() {
+    if (!ideState.history || ideState.history.length === 0) return;
+    var prev = ideState.history.pop();
+    ideState.stack = prev.stack;
+    ideState.pc = prev.pc;
+    ideState.ifStack = prev.ifStack;
+    ideState.error = null;
+    ideState.running = true;
+    renderStack(false);
+    renderStepInfo();
+    updateLineNumbers();
+    hideIdeResult();
+  }
+
+  // -- Run all --
+  function ideRun() {
+    ideStart();
+    if (ideState.instructions.length === 0) {
+      ideState.running = false;
+      renderStepInfo();
+      return;
+    }
+    var maxSteps = 10000;
+    var steps = 0;
+    while (ideState.pc < ideState.instructions.length && steps < maxSteps) {
+      var instr = ideState.instructions[ideState.pc];
+
+      if (ideState.ifStack.length > 0 && !ideState.ifStack[ideState.ifStack.length - 1]) {
+        if (instr.token === 'OP_IF') ideState.ifStack.push(false);
+        else if (instr.token === 'OP_ELSE') { if (ideState.ifStack.length > 0) ideState.ifStack[ideState.ifStack.length - 1] = !ideState.ifStack[ideState.ifStack.length - 1]; }
+        else if (instr.token === 'OP_ENDIF') { if (ideState.ifStack.length > 0) ideState.ifStack.pop(); }
+        ideState.pc++;
+        steps++;
+        continue;
+      }
+
+      var err = execOne(instr, ideState.stack, ideState.ifStack);
+      ideState.pc++;
+      steps++;
+
+      if (err) {
+        ideState.error = err;
+        showIdeResult(t('ide_error_at').replace('{line}', instr.line + 1).replace('{msg}', err), 'fail');
+        ideState.running = false;
+        renderStack(false);
+        renderStepInfo();
+        updateLineNumbers();
+        return;
+      }
+    }
+
+    renderStack(false);
+    renderStepInfo();
+    updateLineNumbers();
+    ideFinalResult();
+  }
+
+  // -- Determine final result --
+  function ideFinalResult() {
+    if (ideState.error) return;
+    if (ideState.stack.length === 0) {
+      showIdeResult(t('ide_result_empty'), 'fail');
+    } else {
+      var top = ideState.stack[ideState.stack.length - 1];
+      if (isTruthy(top)) {
+        showIdeResult(t('ide_result_true'), 'ok');
+      } else {
+        showIdeResult(t('ide_result_false'), 'fail');
+      }
+    }
+  }
+
+  // -- Autocomplete --
+  var acIdx = -1;
+  var acItems = [];
+
+  function showAutocomplete(prefix) {
+    if (!prefix || prefix.length < 2) { hideAutocomplete(); return; }
+    prefix = prefix.toUpperCase();
+    acItems = ALL_OPS.filter(function(op) {
+      return op.name.indexOf(prefix) === 0 ||
+        (op.aliases && op.aliases.some(function(a) { return a.toUpperCase().indexOf(prefix) === 0; }));
+    }).slice(0, 10);
+    if (acItems.length === 0) { hideAutocomplete(); return; }
+    acIdx = 0;
+    var catLabels = {stack:'Stack',crypto:'Crypto',arith:'Arithmetic',logic:'Logic',flow:'Flow',const:'Constant',disabled:'Disabled'};
+    $autocomplete.innerHTML = acItems.map(function(op, i) {
+      return '<div class="ide-ac-item' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '">' +
+        '<span>' + escHtml(op.name) + '</span>' +
+        '<span class="ide-ac-cat">' + (catLabels[op.cat] || '') + '</span></div>';
+    }).join('');
+    $autocomplete.style.display = 'block';
+  }
+  function hideAutocomplete() {
+    $autocomplete.style.display = 'none';
+    acIdx = -1;
+    acItems = [];
+  }
+  function applyAutocomplete(idx) {
+    if (idx < 0 || idx >= acItems.length) return;
+    var op = acItems[idx];
+    var val = $editor.value;
+    var pos = $editor.selectionStart;
+    var before = val.slice(0, pos);
+    var tokenStart = Math.max(before.lastIndexOf('\n'), before.lastIndexOf(' ')) + 1;
+    var after = val.slice(pos);
+    var tokenEnd = after.search(/[\s\n]|$/);
+    if (tokenEnd < 0) tokenEnd = after.length;
+    $editor.value = val.slice(0, tokenStart) + op.name + after.slice(tokenEnd);
+    var newPos = tokenStart + op.name.length;
+    $editor.setSelectionRange(newPos, newPos);
+    $editor.focus();
+    hideAutocomplete();
+    updateHighlight();
+    updateLineNumbers();
+  }
+
+  // -- Populate OP code reference --
+  function renderRefGrid() {
+    if (!$refGrid) return;
+    $refGrid.innerHTML = ALL_OPS.map(function(op) {
+      return '<div class="ide-ref-item">' +
+        '<span class="ide-ref-name" data-op="' + escHtml(op.name) + '">' + escHtml(op.name) + '</span>' +
+        '<span class="ide-ref-hex">' + escHtml(op.hex) + '</span>' +
+        '<span class="ide-ref-desc">' + escHtml(op.desc[lang] || op.desc.en) + '</span></div>';
+    }).join('');
+  }
+  renderRefGrid();
+
+  // -- Event listeners --
+  $editor.addEventListener('input', function() {
+    updateHighlight();
+    updateLineNumbers();
+    var pos = this.selectionStart;
+    var before = this.value.slice(0, pos);
+    var tokenStart = Math.max(before.lastIndexOf('\n'), before.lastIndexOf(' ')) + 1;
+    var currentToken = before.slice(tokenStart);
+    if (currentToken.toUpperCase().startsWith('OP_') || currentToken.toUpperCase().startsWith('OP')) {
+      showAutocomplete(currentToken);
+    } else {
+      hideAutocomplete();
+    }
+  });
+
+  $editor.addEventListener('scroll', syncScroll);
+
+  $editor.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (acItems.length > 0 && acIdx >= 0) {
+        applyAutocomplete(acIdx);
+      } else {
+        var s = this.selectionStart, end = this.selectionEnd;
+        this.value = this.value.slice(0, s) + '  ' + this.value.slice(end);
+        this.selectionStart = this.selectionEnd = s + 2;
+        updateHighlight();
+        updateLineNumbers();
+      }
+      return;
+    }
+    if ($autocomplete.style.display !== 'none') {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acIdx = Math.min(acIdx + 1, acItems.length - 1);
+        $autocomplete.querySelectorAll('.ide-ac-item').forEach(function(el, i) { el.classList.toggle('active', i === acIdx); });
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acIdx = Math.max(acIdx - 1, 0);
+        $autocomplete.querySelectorAll('.ide-ac-item').forEach(function(el, i) { el.classList.toggle('active', i === acIdx); });
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (acItems.length > 0 && acIdx >= 0) {
+          e.preventDefault();
+          applyAutocomplete(acIdx);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        hideAutocomplete();
+        return;
+      }
+    }
+  });
+
+  $autocomplete.addEventListener('click', function(e) {
+    var item = e.target.closest('.ide-ac-item');
+    if (item) applyAutocomplete(parseInt(item.dataset.idx));
+  });
+
+  // Template selector
+  $template.addEventListener('change', function() {
+    var key = this.value;
+    if (key && IDE_TEMPLATES[key]) {
+      $editor.value = IDE_TEMPLATES[key];
+      updateHighlight();
+      updateLineNumbers();
+      ideReset();
+    }
+  });
+
+  // Buttons
+  document.getElementById('btn-ide-run').addEventListener('click', ideRun);
+  document.getElementById('btn-ide-step').addEventListener('click', ideStep);
+  document.getElementById('btn-ide-back').addEventListener('click', ideBack);
+  document.getElementById('btn-ide-reset').addEventListener('click', ideReset);
+
+  // Reference grid - click to insert opcode
+  $refGrid.addEventListener('click', function(e) {
+    var nameEl = e.target.closest('.ide-ref-name');
+    if (!nameEl) return;
+    var opName = nameEl.dataset.op;
+    var pos = $editor.selectionStart;
+    var val = $editor.value;
+    var insert = (pos > 0 && val[pos - 1] !== '\n' ? '\n' : '') + opName + '\n';
+    $editor.value = val.slice(0, pos) + insert + val.slice(pos);
+    var newPos = pos + insert.length;
+    $editor.setSelectionRange(newPos, newPos);
+    $editor.focus();
+    updateHighlight();
+    updateLineNumbers();
+  });
+
+  // Initial render
+  updateHighlight();
+  updateLineNumbers();
+  renderStack(false);
+  renderStepInfo();
+  hideIdeResult();
+
+  // Expose renderRefGrid for setLang hook
+  window._ideRenderRefGrid = renderRefGrid;
+})();
+</script>

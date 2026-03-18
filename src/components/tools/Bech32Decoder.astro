@@ -1,0 +1,59 @@
+<!-- Bech32 / Base58 Decoder Tool -->
+<section class="tool-card" id="tool-bech32">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    <h2 data-ko="Bech32 / Base58 디코더" data-en="Bech32 / Base58 Decoder" data-ja="Bech32 / Base58 デコーダー">Bech32 / Base58 디코더</h2>
+  </div>
+  <div class="tool-body">
+    <input id="enc-input" class="tool-input" placeholder="주소 또는 hex 입력" data-ko="주소 또는 hex 입력" data-en="Enter address or hex" data-ja="アドレスまたはhex入力" aria-label="Bech32 또는 Base58 주소 입력" spellcheck="false">
+    <div class="btn-row">
+      <button class="tool-btn sm" id="btn-decode-bech32" data-ko="Bech32 디코드" data-en="Bech32 Decode" data-ja="Bech32 デコード">Bech32 디코드</button>
+      <button class="tool-btn sm" id="btn-decode-base58" data-ko="Base58 디코드" data-en="Base58 Decode" data-ja="Base58 デコード">Base58 디코드</button>
+    </div>
+    <div id="enc-result" class="tool-result"></div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  function decodeBech32() {
+    var s = document.getElementById('enc-input').value.trim();
+    var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    if (!s.startsWith('bc1') && !s.startsWith('tb1')) {
+      showResult('enc-result', '<span class="err">' + t('bech32_error') + '</span>', true); return;
+    }
+    var sep = s.lastIndexOf('1');
+    var hrp = s.slice(0, sep);
+    var data = s.slice(sep+1).toLowerCase();
+    var version = CHARSET.indexOf(data[0]);
+    var html = row('HRP (Human-Readable Part)', hrp) +
+      row('Witness Version', version) +
+      row('Data Part', data.slice(1)) +
+      row(t('length'), s.length + ' ' + t('length_chars')) +
+      row(t('type'), s.startsWith('bc1p') ? 'P2TR (Taproot)' : s.startsWith('bc1q') && s.length===42 ? 'P2WPKH' : 'P2WSH');
+    showResult('enc-result', html);
+  }
+
+  function decodeBase58() {
+    var s = document.getElementById('enc-input').value.trim();
+    var ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    if (![...s].every(function(c) { return ALPHA.includes(c); })) {
+      showResult('enc-result', '<span class="err">' + t('base58_error') + '</span>', true); return;
+    }
+    var n = BigInt(0);
+    for (var i = 0; i < s.length; i++) n = n * 58n + BigInt(ALPHA.indexOf(s[i]));
+    var hex = n.toString(16).padStart(50, '0').slice(-50);
+    var version = hex.slice(0, 2);
+    var versionNames = { '00': t('p2pkh_mainnet'), '05': t('p2sh_mainnet'), '6f': t('p2pkh_testnet'), '80': t('wif_privkey'), '0488b21e': 'xpub', '0488ade4': 'xprv' };
+    var html = rowHtml('Hex', '<span class="word-break-all">' + escHtml(hex) + '</span>') +
+      row('Version byte', '0x' + version) +
+      row(t('type'), versionNames[version] || t('unknown')) +
+      row('Payload', hex.slice(2, -8)) +
+      row('Checksum', hex.slice(-8));
+    showResult('enc-result', html);
+  }
+
+  document.getElementById('btn-decode-bech32')?.addEventListener('click', decodeBech32);
+  document.getElementById('btn-decode-base58')?.addEventListener('click', decodeBase58);
+})();
+</script>

@@ -1,0 +1,64 @@
+<!-- Unit Converter Tool -->
+<section class="tool-card" id="tool-unit">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <h2 data-ko="단위 변환기" data-en="Unit Converter" data-ja="単位変換器">단위 변환기</h2>
+  </div>
+  <div class="tool-body">
+    <div class="conv-row"><label for="conv-btc">BTC</label><input id="conv-btc" class="tool-input sm" type="number" placeholder="0.0"></div>
+    <div class="conv-row"><label for="conv-sat">Satoshi</label><input id="conv-sat" class="tool-input sm" type="number" placeholder="0"></div>
+    <div class="conv-row"><label for="conv-mbtc">mBTC</label><input id="conv-mbtc" class="tool-input sm" type="number" placeholder="0.0"></div>
+    <div class="conv-row"><label for="conv-bits">bits (μBTC)</label><input id="conv-bits" class="tool-input sm" type="number" placeholder="0.0"></div>
+    <div class="conv-row"><label for="conv-krw" data-ko="KRW (원)" data-en="KRW (₩)" data-ja="KRW (₩)">KRW (원)</label><input id="conv-krw" class="tool-input sm" type="number" placeholder="0"></div>
+    <div class="conv-row"><label for="conv-usd">USD ($)</label><input id="conv-usd" class="tool-input sm" type="number" placeholder="0"></div>
+    <div class="conv-price-info" id="conv-price-info" data-ko="가격 로딩 중…" data-en="Loading price..." data-ja="価格読み込み中…">가격 로딩 중…</div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  var _btcKrw = null, _btcUsd = null;
+
+  function loadPrices() {
+    Promise.all([
+      fetchRetry('https://api.upbit.com/v1/ticker?markets=KRW-BTC',8000).then(function(r){return r.json();}),
+      fetchRetry('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',8000).then(function(r){return r.json();})
+    ]).then(function(results) {
+      _btcKrw = results[0][0].trade_price;
+      _btcUsd = parseFloat(results[1].price);
+      document.getElementById('conv-price-info').textContent =
+        '1 BTC = ' + _btcKrw.toLocaleString() + '원 / $' + _btcUsd.toLocaleString();
+    }).catch(function(e) {
+      console.error('loadPrices error:', e);
+      var info = document.getElementById('conv-price-info');
+      info.textContent = '';
+      info.appendChild(document.createTextNode(t('price_load_fail') + ' '));
+      var retryBtn = document.createElement('button');
+      retryBtn.textContent = t('retry');
+      retryBtn.className = 'retry-btn';
+      retryBtn.addEventListener('click', loadPrices);
+      info.appendChild(retryBtn);
+    });
+  }
+  loadPrices();
+
+  function convertUnit(from) {
+    var ids = ['btc','sat','mbtc','bits','krw','usd'];
+    var vals = { btc: 1, sat: 1e-8, mbtc: 1e-3, bits: 1e-6, krw: _btcKrw ? 1/_btcKrw : null, usd: _btcUsd ? 1/_btcUsd : null };
+    var rawVal = parseFloat(document.getElementById('conv-'+from).value);
+    if (isNaN(rawVal) || !vals[from]) return;
+    var btcVal = rawVal * vals[from];
+    ids.forEach(function(id) {
+      if (id === from) return;
+      var el = document.getElementById('conv-'+id);
+      if (!vals[id]) { el.value = ''; return; }
+      var v = btcVal / vals[id];
+      el.value = id === 'sat' ? Math.round(v) : v.toFixed(id==='krw'||id==='usd' ? 2 : 8).replace(/\.?0+$/, '');
+    });
+  }
+
+  ['btc','sat','mbtc','bits','krw','usd'].forEach(function(u) {
+    document.getElementById('conv-'+u)?.addEventListener('input', function() { convertUnit(u); });
+  });
+})();
+</script>

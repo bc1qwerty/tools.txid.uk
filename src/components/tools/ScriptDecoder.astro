@@ -1,0 +1,47 @@
+<!-- Script Decoder Tool -->
+<section class="tool-card" id="tool-script">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    <h2 data-ko="스크립트 디코더" data-en="Script Decoder" data-ja="スクリプトデコーダー">스크립트 디코더</h2>
+  </div>
+  <div class="tool-body">
+    <input id="script-input" class="tool-input" placeholder="scriptPubKey hex (예: 76a914...88ac)" data-ko="scriptPubKey hex (예: 76a914...88ac)" data-en="scriptPubKey hex (e.g. 76a914...88ac)" data-ja="scriptPubKey hex (例: 76a914...88ac)" aria-label="스크립트 hex 입력" spellcheck="false">
+    <button class="tool-btn" id="btn-decode-script" data-ko="디코드" data-en="Decode" data-ja="デコード">디코드</button>
+    <div id="script-result" class="tool-result"></div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  function decodeScript() {
+    var hex = document.getElementById('script-input').value.trim().replace(/\s/g, '');
+    if (!hex || !/^[0-9a-fA-F]+$/.test(hex)) {
+      showResult('script-result', '<span class="err">' + t('invalid_hex') + '</span>', true); return;
+    }
+    var bytes = hex.match(/.{2}/g).map(function(h) { return parseInt(h, 16); });
+    var type = 'Unknown Script', decoded = [];
+
+    if (bytes[0]===0x76 && bytes[1]===0xa9 && bytes[2]===0x14 && bytes[bytes.length-2]===0x88 && bytes[bytes.length-1]===0xac) {
+      type = 'P2PKH'; var pkh = hex.slice(6, 46); decoded.push(row(t('type'),'P2PKH (Pay-to-Public-Key-Hash)')); decoded.push(row('PubKeyHash', pkh));
+    } else if (bytes[0]===0xa9 && bytes[1]===0x14 && bytes[bytes.length-1]===0x87) {
+      type = 'P2SH'; var sh = hex.slice(4, 44); decoded.push(row(t('type'),'P2SH (Pay-to-Script-Hash)')); decoded.push(row('ScriptHash', sh));
+    } else if (bytes[0]===0x00 && bytes[1]===0x14) {
+      type = 'P2WPKH'; var wkh = hex.slice(4, 44); decoded.push(row(t('type'),'P2WPKH (Native SegWit v0)')); decoded.push(row('WitnessKeyHash', wkh));
+    } else if (bytes[0]===0x00 && bytes[1]===0x20) {
+      type = 'P2WSH'; var wsh = hex.slice(4, 68); decoded.push(row(t('type'),'P2WSH (Native SegWit v0)')); decoded.push(row('WitnessScriptHash', wsh));
+    } else if (bytes[0]===0x51 && bytes[1]===0x20) {
+      type = 'P2TR'; var tp = hex.slice(4, 68); decoded.push(row(t('type'),'P2TR (Taproot, SegWit v1)')); decoded.push(row('TweakedPubkey', tp));
+    } else if (bytes[0]===0x6a) {
+      type = 'OP_RETURN'; var data = hex.slice(4); decoded.push(row(t('type'),t('op_return_data'))); decoded.push(row(t('data'), data));
+      try { decoded.push(row('UTF-8', new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(bytes.slice(2))))); } catch(e) {}
+    } else {
+      decoded.push(row(t('type'),t('unknown_script'))); decoded.push(row('Raw hex', hex));
+    }
+    decoded.push(row(t('length'), bytes.length + ' bytes'));
+    showResult('script-result', '<span class="accent">[' + type + ']</span>\n' + decoded.join(''));
+  }
+
+  document.getElementById('btn-decode-script')?.addEventListener('click', decodeScript);
+  document.getElementById('script-input')?.addEventListener('keydown', function(e) { if (e.key === 'Enter') decodeScript(); });
+})();
+</script>

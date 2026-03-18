@@ -1,0 +1,74 @@
+<!-- OP Code Dictionary Tool -->
+<section class="tool-card" id="tool-opcodes">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <h2 data-ko="OP 코드 사전" data-en="OP Code Dictionary" data-ja="OPコード辞典">OP 코드 사전</h2>
+  </div>
+  <div class="tool-body">
+    <input id="op-search" class="tool-input" placeholder="OP_RETURN, 0x6a, 106..." data-ko="OP_RETURN, 0x6a, 106..." data-en="OP_RETURN, 0x6a, 106..." data-ja="OP_RETURN, 0x6a, 106..." aria-label="OP 코드 검색">
+    <div id="op-result" class="tool-result op-grid"></div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  function getOpcodes() {
+    return [
+      { name:'OP_0', hex:'0x00', dec:0, descKey:'opcode_desc_0' },
+      { name:'OP_RETURN', hex:'0x6a', dec:106, descKey:'opcode_desc_return' },
+      { name:'OP_DUP', hex:'0x76', dec:118, descKey:'opcode_desc_dup' },
+      { name:'OP_HASH160', hex:'0xa9', dec:169, descKey:'opcode_desc_hash160' },
+      { name:'OP_EQUALVERIFY', hex:'0x88', dec:136, descKey:'opcode_desc_equalverify' },
+      { name:'OP_CHECKSIG', hex:'0xac', dec:172, descKey:'opcode_desc_checksig' },
+      { name:'OP_CHECKMULTISIG', hex:'0xae', dec:174, descKey:'opcode_desc_checkmultisig' },
+      { name:'OP_EQUAL', hex:'0x87', dec:135, descKey:'opcode_desc_equal' },
+      { name:'OP_VERIFY', hex:'0x69', dec:105, descKey:'opcode_desc_verify' },
+      { name:'OP_IF', hex:'0x63', dec:99, descKey:'opcode_desc_if' },
+      { name:'OP_ELSE', hex:'0x67', dec:103, descKey:'opcode_desc_else' },
+      { name:'OP_ENDIF', hex:'0x68', dec:104, descKey:'opcode_desc_endif' },
+      { name:'OP_CHECKLOCKTIMEVERIFY', hex:'0xb1', dec:177, descKey:'opcode_desc_cltv' },
+      { name:'OP_CHECKSEQUENCEVERIFY', hex:'0xb2', dec:178, descKey:'opcode_desc_csv' },
+      { name:'OP_PUSHDATA1', hex:'0x4c', dec:76, descKey:'opcode_desc_pushdata1' },
+      { name:'OP_PUSHDATA2', hex:'0x4d', dec:77, descKey:'opcode_desc_pushdata2' },
+      { name:'OP_1 ~ OP_16', hex:'0x51~0x60', dec:'81~96', descKey:'opcode_desc_1to16' },
+      { name:'OP_ADD', hex:'0x93', dec:147, descKey:'opcode_desc_add' },
+      { name:'OP_SUB', hex:'0x94', dec:148, descKey:'opcode_desc_sub' },
+      { name:'OP_SWAP', hex:'0x7c', dec:124, descKey:'opcode_desc_swap' },
+      { name:'OP_DROP', hex:'0x75', dec:117, descKey:'opcode_desc_drop' },
+      { name:'OP_NOP', hex:'0x61', dec:97, descKey:'opcode_desc_nop' },
+      { name:'OP_CODESEPARATOR', hex:'0xab', dec:171, descKey:'opcode_desc_codesep' },
+      { name:'OP_CHECKSIGADD', hex:'0xba', dec:186, descKey:'opcode_desc_checksigadd' },
+    ];
+  }
+  var OPCODES = getOpcodes();
+  // Expose globally for setLang re-render
+  window.OPCODES = OPCODES;
+
+  function renderOpcodes(list) {
+    var el = document.getElementById('op-result');
+    if (!list.length) { el.innerHTML = '<div class="no-results">' + t('no_search_result') + '</div>'; el.className='tool-result show'; return; }
+    el.innerHTML = list.map(function(op) { return '\n        <div class="op-item">\n          <div class="op-name">' + escHtml(op.name) + '</div>\n          <div class="op-hex">' + escHtml(op.hex) + ' (' + escHtml(String(op.dec)) + ')</div>\n          <div class="op-desc">' + escHtml(t(op.descKey)) + '</div>\n        </div>'; }).join('');
+    el.className = 'tool-result show op-grid';
+  }
+  // Expose globally for setLang re-render
+  window.renderOpcodes = renderOpcodes;
+
+  function searchOpcode(q) {
+    if (!q) { document.getElementById('op-result').className='tool-result'; return; }
+    q = q.toLowerCase();
+    var res = OPCODES.filter(function(op) {
+      return op.name.toLowerCase().includes(q) ||
+        op.hex.includes(q) ||
+        String(op.dec).includes(q) ||
+        t(op.descKey).toLowerCase().includes(q);
+    });
+    renderOpcodes(res);
+  }
+
+  // Initial render
+  renderOpcodes(OPCODES);
+
+  // Search binding
+  document.getElementById('op-search')?.addEventListener('input', function() { searchOpcode(this.value); });
+})();
+</script>

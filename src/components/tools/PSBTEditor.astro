@@ -1,0 +1,406 @@
+<!-- PSBT Editor Tool -->
+<section class="tool-card tool-card--wide" id="tool-psbt">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+    <h2 data-ko="PSBT 에디터" data-en="PSBT Editor" data-ja="PSBTエディタ">PSBT 에디터</h2>
+  </div>
+  <div class="tool-body">
+    <div class="psbt-input-row">
+      <textarea id="psbt-input" class="tool-input textarea" rows="4" spellcheck="false"
+        placeholder="Base64 또는 hex 형식의 PSBT 붙여넣기"
+        data-ko="Base64 또는 hex 형식의 PSBT 붙여넣기"
+        data-en="Paste PSBT in Base64 or hex format"
+        data-ja="Base64またはhex形式のPSBTを貼り付け"
+        aria-label="PSBT input"></textarea>
+      <div class="btn-row">
+        <button class="tool-btn" id="btn-psbt-decode" data-ko="디코드" data-en="Decode" data-ja="デコード">디코드</button>
+        <button class="tool-btn sm" id="btn-psbt-example" data-ko="예제 PSBT 로드" data-en="Load Example PSBT" data-ja="サンプルPSBTを読込">예제 PSBT 로드</button>
+      </div>
+    </div>
+    <div id="psbt-result" class="tool-result"></div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  'use strict';
+
+  var PSBT_MAGIC = [0x70, 0x73, 0x62, 0x74, 0xff];
+
+  var GLOBAL_TYPES = {
+    0x00: 'psbt_unsigned_tx',
+    0x01: 'psbt_xpub',
+    0xfb: 'psbt_version',
+  };
+
+  var INPUT_TYPES = {
+    0x00: 'psbt_non_witness_utxo',
+    0x01: 'psbt_witness_utxo',
+    0x02: 'psbt_partial_sig',
+    0x03: 'psbt_sighash',
+    0x04: 'psbt_redeem_script',
+    0x05: 'psbt_witness_script',
+    0x06: 'psbt_bip32_derivation',
+    0x07: 'psbt_final_scriptsig',
+    0x08: 'psbt_final_witness',
+  };
+
+  var OUTPUT_TYPES = {
+    0x00: 'psbt_redeem_script',
+    0x01: 'psbt_witness_script',
+    0x02: 'psbt_bip32_derivation',
+  };
+
+  var SIGHASH_NAMES = {
+    0x01: 'SIGHASH_ALL',
+    0x02: 'SIGHASH_NONE',
+    0x03: 'SIGHASH_SINGLE',
+    0x81: 'SIGHASH_ALL|ANYONECANPAY',
+    0x82: 'SIGHASH_NONE|ANYONECANPAY',
+    0x83: 'SIGHASH_SINGLE|ANYONECANPAY',
+  };
+
+  function toHex(bytes) {
+    return Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function shortHex(hex, len) {
+    len = len || 8;
+    if (hex.length <= len * 2 + 4) return hex;
+    return hex.slice(0, len) + '...' + hex.slice(-len);
+  }
+  function reverseHex(hex) {
+    return hex.match(/.{2}/g).reverse().join('');
+  }
+  function readVarInt(bytes, offset) {
+    var first = bytes[offset];
+    if (first < 0xfd) return { value: first, size: 1 };
+    if (first === 0xfd) return { value: bytes[offset+1] | (bytes[offset+2] << 8), size: 3 };
+    if (first === 0xfe) return { value: bytes[offset+1] | (bytes[offset+2] << 8) | (bytes[offset+3] << 16) | (bytes[offset+4] << 24), size: 5 };
+    return { value: bytes[offset+1] | (bytes[offset+2] << 8) | (bytes[offset+3] << 16) | (bytes[offset+4] << 24), size: 9 };
+  }
+  function readCompactSize(bytes, offset) {
+    return readVarInt(bytes, offset);
+  }
+  function readUint32LE(bytes, offset) {
+    return (bytes[offset] | (bytes[offset+1] << 8) | (bytes[offset+2] << 16) | ((bytes[offset+3] << 24) >>> 0)) >>> 0;
+  }
+  function readUint64LE(bytes, offset) {
+    var lo = readUint32LE(bytes, offset);
+    var hi = readUint32LE(bytes, offset + 4);
+    return lo + hi * 0x100000000;
+  }
+  function satsToBtc(sats) {
+    return (sats / 1e8).toFixed(8).replace(/\.?0+$/, '');
+  }
+
+  function parseRawTx(bytes) {
+    var tx = { version: 0, inputs: [], outputs: [], locktime: 0 };
+    var off = 0;
+    tx.version = readUint32LE(bytes, off); off += 4;
+    var hasWitness = false;
+    if (bytes[off] === 0x00 && bytes[off+1] !== 0x00) {
+      hasWitness = true;
+      off += 2;
+    }
+    var vi = readCompactSize(bytes, off); off += vi.size;
+    var inputCount = vi.value;
+    for (var i = 0; i < inputCount; i++) {
+      var prevHash = toHex(bytes.slice(off, off + 32)); off += 32;
+      var vout = readUint32LE(bytes, off); off += 4;
+      var scriptLen = readCompactSize(bytes, off); off += scriptLen.size;
+      var scriptSig = toHex(bytes.slice(off, off + scriptLen.value)); off += scriptLen.value;
+      var sequence = readUint32LE(bytes, off); off += 4;
+      tx.inputs.push({ prevHash: reverseHex(prevHash), vout: vout, scriptSig: scriptSig, sequence: sequence });
+    }
+    vi = readCompactSize(bytes, off); off += vi.size;
+    var outputCount = vi.value;
+    for (var o = 0; o < outputCount; o++) {
+      var value = readUint64LE(bytes, off); off += 8;
+      var spkLen = readCompactSize(bytes, off); off += spkLen.size;
+      var scriptPubKey = toHex(bytes.slice(off, off + spkLen.value)); off += spkLen.value;
+      tx.outputs.push({ value: value, scriptPubKey: scriptPubKey });
+    }
+    if (hasWitness) {
+      for (var wi = 0; wi < inputCount; wi++) {
+        var witCount = readCompactSize(bytes, off); off += witCount.size;
+        for (var wj = 0; wj < witCount.value; wj++) {
+          var witLen = readCompactSize(bytes, off); off += witLen.size;
+          off += witLen.value;
+        }
+      }
+    }
+    tx.locktime = readUint32LE(bytes, off);
+    return tx;
+  }
+
+  function parseMap(bytes, offset) {
+    var entries = [];
+    while (offset < bytes.length) {
+      var keyLenVi = readCompactSize(bytes, offset); offset += keyLenVi.size;
+      if (keyLenVi.value === 0) break;
+      var keyBytes = bytes.slice(offset, offset + keyLenVi.value); offset += keyLenVi.value;
+      var keyType = keyBytes[0];
+      var keyData = keyBytes.length > 1 ? toHex(keyBytes.slice(1)) : '';
+      var valLenVi = readCompactSize(bytes, offset); offset += valLenVi.size;
+      var valBytes = bytes.slice(offset, offset + valLenVi.value); offset += valLenVi.value;
+      entries.push({ keyType: keyType, keyData: keyData, keyHex: toHex(keyBytes), value: valBytes, valueHex: toHex(valBytes) });
+    }
+    return { entries: entries, nextOffset: offset };
+  }
+
+  function parsePSBT(bytes) {
+    for (var m = 0; m < 5; m++) {
+      if (bytes[m] !== PSBT_MAGIC[m]) throw new Error(t('psbt_bad_magic'));
+    }
+    var offset = 5;
+    var globalMap = parseMap(bytes, offset);
+    offset = globalMap.nextOffset;
+    var unsignedTx = null;
+    var psbtVersion = 0;
+    globalMap.entries.forEach(function(e) {
+      if (e.keyType === 0x00) { unsignedTx = parseRawTx(e.value); }
+      else if (e.keyType === 0xfb) { psbtVersion = readUint32LE(e.value, 0); }
+    });
+    var inputCount = unsignedTx ? unsignedTx.inputs.length : 0;
+    var inputMaps = [];
+    for (var i = 0; i < inputCount; i++) {
+      var iMap = parseMap(bytes, offset);
+      offset = iMap.nextOffset;
+      inputMaps.push(iMap.entries);
+    }
+    var outputCount = unsignedTx ? unsignedTx.outputs.length : 0;
+    var outputMaps = [];
+    for (var o = 0; o < outputCount; o++) {
+      var oMap = parseMap(bytes, offset);
+      offset = oMap.nextOffset;
+      outputMaps.push(oMap.entries);
+    }
+    return {
+      globalEntries: globalMap.entries,
+      unsignedTx: unsignedTx,
+      psbtVersion: psbtVersion,
+      inputMaps: inputMaps,
+      outputMaps: outputMaps,
+    };
+  }
+
+  function renderFieldRow(label, value, cls) {
+    cls = cls || '';
+    return '<div class="psbt-field' + (cls ? ' ' + cls : '') + '">' +
+      '<span class="psbt-field-label">' + escHtml(label) + '</span>' +
+      '<span class="psbt-field-value">' + value + '</span></div>';
+  }
+  function renderHexValue(hex) {
+    if (hex.length <= 32) return '<code class="psbt-hex">' + escHtml(hex) + '</code>';
+    return '<code class="psbt-hex psbt-hex-long" title="' + escHtml(hex) + '">' + escHtml(shortHex(hex, 16)) + '</code>' +
+      '<button class="psbt-expand-btn" onclick="this.previousElementSibling.textContent=this.previousElementSibling.title;this.remove();" data-ko="전체 보기" data-en="Show full" data-ja="全表示">' +
+      (lang === 'en' ? 'Show full' : lang === 'ja' ? '全表示' : '전체 보기') + '</button>';
+  }
+
+  function renderGlobal(parsed) {
+    var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_global') + '</div>';
+    parsed.globalEntries.forEach(function(e) {
+      var label = GLOBAL_TYPES[e.keyType] ? t(GLOBAL_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+      if (e.keyType === 0x00) {
+        html += renderFieldRow(label, '<span class="psbt-tag">' + e.valueHex.length / 2 + ' ' + t('psbt_bytes') + '</span>');
+      } else if (e.keyType === 0xfb) {
+        html += renderFieldRow(label, String(readUint32LE(e.value, 0)));
+      } else {
+        html += renderFieldRow(label, renderHexValue(e.valueHex));
+        if (e.keyData) html += renderFieldRow('  ' + t('psbt_key') + ' data', renderHexValue(e.keyData));
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderTxPreview(tx) {
+    if (!tx) return '';
+    var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_tx_preview') + '</div>';
+    html += renderFieldRow(t('psbt_tx_version'), String(tx.version));
+    html += renderFieldRow(t('psbt_inputs_count'), String(tx.inputs.length));
+    html += renderFieldRow(t('psbt_outputs_count'), String(tx.outputs.length));
+    tx.inputs.forEach(function(inp, i) {
+      html += '<div class="psbt-subsection"><div class="psbt-subsection-title">' + t('psbt_input') + ' #' + i + '</div>';
+      html += renderFieldRow(t('psbt_prev_txid'), renderHexValue(inp.prevHash));
+      html += renderFieldRow(t('psbt_vout'), String(inp.vout));
+      html += renderFieldRow(t('psbt_sequence'), '0x' + inp.sequence.toString(16).padStart(8, '0'));
+      html += '</div>';
+    });
+    tx.outputs.forEach(function(out, i) {
+      html += '<div class="psbt-subsection"><div class="psbt-subsection-title">' + t('psbt_output') + ' #' + i + '</div>';
+      html += renderFieldRow(t('psbt_value'), out.value.toLocaleString() + ' sats');
+      html += renderFieldRow(t('psbt_value_btc'), satsToBtc(out.value) + ' BTC');
+      html += renderFieldRow(t('psbt_script_pubkey'), renderHexValue(out.scriptPubKey));
+      html += '</div>';
+    });
+    html += renderFieldRow(t('psbt_locktime'), String(tx.locktime));
+    html += '</div>';
+    return html;
+  }
+
+  function renderInputMaps(inputMaps) {
+    if (!inputMaps.length) return '';
+    var html = '';
+    inputMaps.forEach(function(entries, i) {
+      html += '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_input') + ' #' + i + '</div>';
+      if (entries.length === 0) {
+        html += '<div class="psbt-empty">' + t('psbt_status_unsigned') + '</div>';
+      }
+      entries.forEach(function(e) {
+        var label = INPUT_TYPES[e.keyType] ? t(INPUT_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+        if (e.keyType === 0x03) {
+          var shVal = e.value.length >= 4 ? readUint32LE(e.value, 0) : e.value[0];
+          var shName = SIGHASH_NAMES[shVal] || '0x' + shVal.toString(16);
+          html += renderFieldRow(label, shName);
+        } else if (e.keyType === 0x01) {
+          if (e.value.length >= 8) {
+            var wVal = readUint64LE(e.value, 0);
+            var wSpkLen = readCompactSize(e.value, 8);
+            var wSpk = toHex(e.value.slice(8 + wSpkLen.size, 8 + wSpkLen.size + wSpkLen.value));
+            html += renderFieldRow(label, wVal.toLocaleString() + ' sats (' + satsToBtc(wVal) + ' BTC)');
+            html += renderFieldRow('  ' + t('psbt_script_pubkey'), renderHexValue(wSpk));
+          } else {
+            html += renderFieldRow(label, renderHexValue(e.valueHex));
+          }
+        } else if (e.keyType === 0x06) {
+          html += renderFieldRow(label, '');
+          if (e.keyData) html += renderFieldRow('  Pubkey', renderHexValue(e.keyData));
+          if (e.value.length >= 4) {
+            var fp = toHex(e.value.slice(0, 4));
+            var pathParts = ['m'];
+            for (var pi = 4; pi + 3 < e.value.length; pi += 4) {
+              var idx = readUint32LE(e.value, pi);
+              pathParts.push(idx >= 0x80000000 ? (idx - 0x80000000) + "'" : String(idx));
+            }
+            html += renderFieldRow('  Fingerprint', fp);
+            html += renderFieldRow('  Path', pathParts.join('/'));
+          }
+        } else {
+          html += renderFieldRow(label, renderHexValue(e.valueHex));
+          if (e.keyData) html += renderFieldRow('  ' + t('psbt_key') + ' data', renderHexValue(e.keyData));
+        }
+      });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function renderOutputMaps(outputMaps) {
+    if (!outputMaps.length) return '';
+    var html = '';
+    outputMaps.forEach(function(entries, i) {
+      if (entries.length === 0) return;
+      html += '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_output') + ' #' + i + '</div>';
+      entries.forEach(function(e) {
+        var label = OUTPUT_TYPES[e.keyType] ? t(OUTPUT_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+        if (e.keyType === 0x02) {
+          html += renderFieldRow(label, '');
+          if (e.keyData) html += renderFieldRow('  Pubkey', renderHexValue(e.keyData));
+          if (e.value.length >= 4) {
+            var fp = toHex(e.value.slice(0, 4));
+            var pathParts = ['m'];
+            for (var pi = 4; pi + 3 < e.value.length; pi += 4) {
+              var idx = readUint32LE(e.value, pi);
+              pathParts.push(idx >= 0x80000000 ? (idx - 0x80000000) + "'" : String(idx));
+            }
+            html += renderFieldRow('  Fingerprint', fp);
+            html += renderFieldRow('  Path', pathParts.join('/'));
+          }
+        } else {
+          html += renderFieldRow(label, renderHexValue(e.valueHex));
+        }
+      });
+      html += '</div>';
+    });
+    return html;
+  }
+
+  function renderSigningStatus(inputMaps) {
+    var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_status') + '</div>';
+    var totalInputs = inputMaps.length;
+    var signedInputs = 0;
+    inputMaps.forEach(function(entries, i) {
+      var hasSig = false;
+      var hasFinal = false;
+      var sigCount = 0;
+      entries.forEach(function(e) {
+        if (e.keyType === 0x02) { hasSig = true; sigCount++; }
+        if (e.keyType === 0x07 || e.keyType === 0x08) { hasFinal = true; hasSig = true; }
+      });
+      if (hasSig || hasFinal) signedInputs++;
+      var statusText = hasFinal ? t('psbt_signed') + ' (finalized)' : hasSig ? t('psbt_signed') + ' (' + sigCount + ')' : t('psbt_not_signed');
+      var statusCls = hasSig ? 'psbt-status-ok' : 'psbt-status-warn';
+      html += '<div class="psbt-status-row">' +
+        '<span class="psbt-status-label">' + t('psbt_input') + ' #' + i + '</span>' +
+        '<span class="psbt-status-badge ' + statusCls + '">' + statusText + '</span></div>';
+    });
+    var overall;
+    if (signedInputs === 0) overall = t('psbt_status_unsigned');
+    else if (signedInputs < totalInputs) overall = t('psbt_status_partial');
+    else overall = t('psbt_status_signed');
+    var overallCls = signedInputs === 0 ? 'psbt-status-warn' : signedInputs < totalInputs ? 'psbt-status-partial' : 'psbt-status-ok';
+    html += '<div class="psbt-overall"><span class="psbt-overall-label">' + t('psbt_status') + ':</span> ' +
+      '<span class="psbt-status-badge ' + overallCls + '">' + overall + '</span> ' +
+      '<span class="psbt-overall-info">(' + signedInputs + '/' + totalInputs + ')</span></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function decodePSBT() {
+    var raw = document.getElementById('psbt-input').value.trim();
+    if (!raw) return;
+    var bytes;
+    try {
+      if (/^[A-Za-z0-9+/=\s]+$/.test(raw)) {
+        var b64 = raw.replace(/\s/g, '');
+        var bin = atob(b64);
+        bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      } else if (/^[0-9a-fA-F\s]+$/.test(raw)) {
+        var hex = raw.replace(/\s/g, '');
+        bytes = new Uint8Array(hex.length / 2);
+        for (var h = 0; h < hex.length; h += 2) bytes[h / 2] = parseInt(hex.substr(h, 2), 16);
+      } else {
+        showResult('psbt-result', '<span class="err">' + t('psbt_invalid') + '</span>', true);
+        return;
+      }
+    } catch (e) {
+      showResult('psbt-result', '<span class="err">' + t('psbt_invalid') + '</span>', true);
+      return;
+    }
+    try {
+      var parsed = parsePSBT(bytes);
+      var html = '<div class="psbt-decoded">';
+      html += renderGlobal(parsed);
+      html += renderTxPreview(parsed.unsignedTx);
+      html += renderInputMaps(parsed.inputMaps);
+      html += renderOutputMaps(parsed.outputMaps);
+      html += renderSigningStatus(parsed.inputMaps);
+      html += '</div>';
+      showResult('psbt-result', html);
+    } catch (e) {
+      showResult('psbt-result', '<span class="err">' + t('psbt_parse_error').replace('{msg}', escHtml(e.message)) + '</span>', true);
+    }
+  }
+
+  function loadExamplePSBT() {
+    var exampleBase64 =
+      'cHNidP8BAHECAAAAAaOxxNXm9wgZIKGyw9Tl9gcYKTpLXG1+j5ChssPU5fYHAAAAAAD9' +
+      '////AoDw+gIAAAAAFgAUq2gCVRPD29L3uSqU4FgfXVD2VOdArusCAAAAABYAFB0PFyoO' +
+      'y0iu4b4fJofSljrjP3GhAAAAAAABAR8A4fUFAAAAABYAFI16PQ4cK0pZaPfm1cSzopGA' +
+      'cWJTIgYCxvwmpniQq83vEjRWeJCrze8SNFZ4kBI0VniQq83vEjQY002zP1QAAIAAAACA' +
+      'AAACAAAAAAAAAAAAACICAKvN7xI0VniQq83vEjRWeJCrze8SNFZ4kKvN7xI0VniQGNNN' +
+      'sz9UAACAAAAAgAAAAIAAAAAABQAAAAAiAgISNFZ4kKvN7xI0VniQq83vEjRWeJCrze8S' +
+      'NFZ4kKvN7xjTTbM/VAAAgAAAAIAAAACAAQAAAAMAAAAA';
+    document.getElementById('psbt-input').value = exampleBase64;
+    decodePSBT();
+  }
+
+  document.getElementById('btn-psbt-decode')?.addEventListener('click', decodePSBT);
+  document.getElementById('btn-psbt-example')?.addEventListener('click', loadExamplePSBT);
+  document.getElementById('psbt-input')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) decodePSBT();
+  });
+})();
+</script>

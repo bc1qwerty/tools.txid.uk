@@ -1,0 +1,381 @@
+<!-- Lightning Invoice (BOLT11) Decoder Tool -->
+<section class="tool-card tool-card--wide" id="tool-bolt11">
+  <div class="tool-header">
+    <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    <h2 data-ko="LN Invoice 디코더" data-en="LN Invoice Decoder" data-ja="LNインボイスデコーダー">LN Invoice 디코더</h2>
+  </div>
+  <div class="tool-body">
+    <textarea id="bolt11-input" class="tool-input textarea" rows="3" spellcheck="false"
+      placeholder="BOLT11 인보이스 붙여넣기 (lnbc...)"
+      data-ko="BOLT11 인보이스 붙여넣기 (lnbc...)"
+      data-en="Paste BOLT11 invoice (lnbc...)"
+      data-ja="BOLT11インボイスを貼り付け (lnbc...)"
+      aria-label="BOLT11 invoice input"></textarea>
+    <div class="btn-row">
+      <button class="tool-btn" id="btn-bolt11-decode" data-ko="디코드" data-en="Decode" data-ja="デコード">디코드</button>
+      <button class="tool-btn sm" id="btn-bolt11-example" data-ko="예제 인보이스 로드" data-en="Load Example Invoice" data-ja="サンプルインボイスを読込">예제 인보이스 로드</button>
+    </div>
+    <div id="bolt11-result" class="tool-result"></div>
+  </div>
+</section>
+
+<script is:inline>
+(function() {
+  'use strict';
+
+  var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  var CHARSET_MAP = {};
+  for (var ci = 0; ci < CHARSET.length; ci++) CHARSET_MAP[CHARSET[ci]] = ci;
+
+  var NETWORK_PREFIXES = {
+    'lnbc': 'bolt11_mainnet',
+    'lntb': 'bolt11_testnet',
+    'lnbs': 'bolt11_signet',
+    'lnbcrt': 'bolt11_regtest',
+  };
+
+  var AMOUNT_MULTIPLIERS = {
+    'm': 0.001,
+    'u': 0.000001,
+    'n': 0.000000001,
+    'p': 0.000000000001,
+  };
+
+  function wordsToBytes(words) {
+    var bits = 0, value = 0, bytes = [];
+    for (var i = 0; i < words.length; i++) {
+      value = (value << 5) | words[i];
+      bits += 5;
+      while (bits >= 8) {
+        bits -= 8;
+        bytes.push((value >>> bits) & 0xff);
+      }
+    }
+    return bytes;
+  }
+
+  function bytesToHex(bytes) {
+    return bytes.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  function parseHRP(hrp) {
+    var network = null, networkKey = null, amountStr = null, amountBtc = null;
+    var prefixes = ['lnbcrt', 'lntb', 'lnbs', 'lnbc'];
+    for (var pi = 0; pi < prefixes.length; pi++) {
+      if (hrp.startsWith(prefixes[pi])) {
+        networkKey = NETWORK_PREFIXES[prefixes[pi]];
+        amountStr = hrp.slice(prefixes[pi].length);
+        break;
+      }
+    }
+    if (!networkKey) return null;
+    if (amountStr && amountStr.length > 0) {
+      var lastChar = amountStr[amountStr.length - 1];
+      if (AMOUNT_MULTIPLIERS[lastChar] !== undefined) {
+        var numPart = amountStr.slice(0, -1);
+        var num = parseFloat(numPart);
+        if (!isNaN(num)) amountBtc = num * AMOUNT_MULTIPLIERS[lastChar];
+      } else {
+        var num2 = parseFloat(amountStr);
+        if (!isNaN(num2)) amountBtc = num2;
+      }
+    }
+    return { networkKey: networkKey, amountBtc: amountBtc };
+  }
+
+  function parseTaggedFields(dataWords) {
+    var fields = [];
+    var pos = 0;
+    if (dataWords.length < 7) return { timestamp: 0, fields: fields };
+    var timestamp = 0;
+    for (var ti = 0; ti < 7; ti++) {
+      timestamp = timestamp * 32 + dataWords[ti];
+    }
+    pos = 7;
+    while (pos + 3 <= dataWords.length) {
+      var tag = dataWords[pos]; pos++;
+      var dataLen = dataWords[pos] * 32 + dataWords[pos + 1]; pos += 2;
+      if (pos + dataLen > dataWords.length) break;
+      var tagData = dataWords.slice(pos, pos + dataLen);
+      pos += dataLen;
+      fields.push({ tag: tag, data: tagData });
+    }
+    return { timestamp: timestamp, fields: fields };
+  }
+
+  function decodeBolt11(invoice) {
+    invoice = invoice.trim().toLowerCase();
+    if (!invoice.startsWith('lnbc') && !invoice.startsWith('lntb') && !invoice.startsWith('lnbs')) {
+      throw new Error(t('bolt11_invalid'));
+    }
+    var sepIdx = invoice.lastIndexOf('1');
+    if (sepIdx < 4) throw new Error(t('bolt11_invalid'));
+    var hrp = invoice.slice(0, sepIdx);
+    var dataPart = invoice.slice(sepIdx + 1);
+    var hrpInfo = parseHRP(hrp);
+    if (!hrpInfo) throw new Error(t('bolt11_invalid'));
+    if (dataPart.length < 116) throw new Error(t('bolt11_invalid'));
+    dataPart = dataPart.slice(0, -6);
+    var dataWords = [];
+    for (var di = 0; di < dataPart.length; di++) {
+      var val = CHARSET_MAP[dataPart[di]];
+      if (val === undefined) throw new Error(t('bolt11_invalid'));
+      dataWords.push(val);
+    }
+    var sigWords = [];
+    if (dataWords.length > 104) {
+      sigWords = dataWords.slice(dataWords.length - 104);
+      dataWords = dataWords.slice(0, dataWords.length - 104);
+    }
+    var sigBytes = wordsToBytes(sigWords);
+    var signature = bytesToHex(sigBytes.slice(0, 64));
+    var recoveryFlag = sigBytes.length > 64 ? sigBytes[64] : 0;
+    var parsed = parseTaggedFields(dataWords);
+    var result = {
+      networkKey: hrpInfo.networkKey,
+      amountBtc: hrpInfo.amountBtc,
+      timestamp: parsed.timestamp,
+      signature: signature,
+      recoveryFlag: recoveryFlag,
+      paymentHash: null,
+      description: null,
+      descriptionHash: null,
+      payee: null,
+      expiry: 3600,
+      minCltvExpiry: null,
+      routeHints: [],
+      featureBits: null,
+      paymentSecret: null,
+      metadata: null,
+      unknownTags: [],
+    };
+
+    parsed.fields.forEach(function(field) {
+      var bytes, hex;
+      switch (field.tag) {
+        case 1:
+          bytes = wordsToBytes(field.data);
+          result.paymentHash = bytesToHex(bytes.slice(0, 32));
+          break;
+        case 13:
+          bytes = wordsToBytes(field.data);
+          try { result.description = new TextDecoder('utf-8', {fatal: false}).decode(new Uint8Array(bytes)); }
+          catch(e) { result.description = bytesToHex(bytes); }
+          break;
+        case 19:
+          bytes = wordsToBytes(field.data);
+          result.payee = bytesToHex(bytes.slice(0, 33));
+          break;
+        case 6:
+          var expiry = 0;
+          for (var xi = 0; xi < field.data.length; xi++) { expiry = expiry * 32 + field.data[xi]; }
+          result.expiry = expiry;
+          break;
+        case 24:
+          var cltv = 0;
+          for (var ci2 = 0; ci2 < field.data.length; ci2++) { cltv = cltv * 32 + field.data[ci2]; }
+          result.minCltvExpiry = cltv;
+          break;
+        case 23:
+          bytes = wordsToBytes(field.data);
+          result.descriptionHash = bytesToHex(bytes.slice(0, 32));
+          break;
+        case 3:
+          bytes = wordsToBytes(field.data);
+          var offset = 0;
+          while (offset + 51 <= bytes.length) {
+            var routePubkey = bytesToHex(bytes.slice(offset, offset + 33));
+            var shortChannelId = bytesToHex(bytes.slice(offset + 33, offset + 41));
+            var feeBase = (bytes[offset+41] << 24 | bytes[offset+42] << 16 | bytes[offset+43] << 8 | bytes[offset+44]) >>> 0;
+            var feeRate = (bytes[offset+45] << 24 | bytes[offset+46] << 16 | bytes[offset+47] << 8 | bytes[offset+48]) >>> 0;
+            var cltvDelta = (bytes[offset+49] << 8 | bytes[offset+50]);
+            result.routeHints.push({
+              pubkey: routePubkey,
+              shortChannelId: shortChannelId,
+              feeBase: feeBase,
+              feeRate: feeRate,
+              cltvDelta: cltvDelta,
+            });
+            offset += 51;
+          }
+          break;
+        case 5:
+          bytes = wordsToBytes(field.data);
+          result.featureBits = bytesToHex(bytes);
+          break;
+        case 16:
+          bytes = wordsToBytes(field.data);
+          result.paymentSecret = bytesToHex(bytes.slice(0, 32));
+          break;
+        case 27:
+          bytes = wordsToBytes(field.data);
+          result.metadata = bytesToHex(bytes);
+          break;
+        default:
+          bytes = wordsToBytes(field.data);
+          result.unknownTags.push({ tag: field.tag, hex: bytesToHex(bytes) });
+          break;
+      }
+    });
+
+    return result;
+  }
+
+  function renderFieldRow(label, value) {
+    return '<div class="psbt-field">' +
+      '<span class="psbt-field-label">' + escHtml(label) + '</span>' +
+      '<span class="psbt-field-value">' + value + '</span></div>';
+  }
+  function renderHexValue2(hex) {
+    if (!hex) return '';
+    if (hex.length <= 32) return '<code class="psbt-hex">' + escHtml(hex) + '</code>';
+    return '<code class="psbt-hex psbt-hex-long" title="' + escHtml(hex) + '">' +
+      escHtml(hex.slice(0, 16) + '...' + hex.slice(-16)) + '</code>' +
+      '<button class="psbt-expand-btn" onclick="this.previousElementSibling.textContent=this.previousElementSibling.title;this.remove();" data-ko="전체 보기" data-en="Show full" data-ja="全表示">' +
+      (lang === 'en' ? 'Show full' : lang === 'ja' ? '全表示' : '전체 보기') + '</button>';
+  }
+
+  function renderBolt11(result) {
+    var html = '<div class="psbt-decoded">';
+    html += '<div class="psbt-section"><div class="psbt-section-title">Lightning Invoice (BOLT11)</div>';
+    html += renderFieldRow(t('bolt11_network'), '<span class="accent">' + t(result.networkKey) + '</span>');
+    if (result.amountBtc !== null && result.amountBtc !== undefined) {
+      var sats = Math.round(result.amountBtc * 1e8);
+      var amountDisplay = sats.toLocaleString() + ' sats';
+      if (result.amountBtc >= 0.001) {
+        amountDisplay += ' (' + result.amountBtc.toFixed(8).replace(/\.?0+$/, '') + ' BTC)';
+      } else {
+        amountDisplay += ' (' + result.amountBtc.toFixed(11).replace(/\.?0+$/, '') + ' BTC)';
+      }
+      html += renderFieldRow(t('bolt11_amount'), '<strong>' + amountDisplay + '</strong>');
+    } else {
+      html += renderFieldRow(t('bolt11_amount'), '<em>' + t('bolt11_no_amount') + '</em>');
+    }
+    if (result.timestamp) {
+      var date = new Date(result.timestamp * 1000);
+      html += renderFieldRow(t('bolt11_timestamp'), date.toISOString().replace('T', ' ').replace(/\.000Z$/, ' UTC') + ' (' + result.timestamp + ')');
+      var expiryTime = result.timestamp + result.expiry;
+      var now = Math.floor(Date.now() / 1000);
+      var isExpired = now > expiryTime;
+      var expiryDate = new Date(expiryTime * 1000);
+      var expiryStr = t('bolt11_expiry_val').replace('{n}', result.expiry).replace('{m}', Math.round(result.expiry / 60));
+      if (isExpired) {
+        expiryStr += ' <span class="err" style="font-size:.85em">(' + t('bolt11_expired') + ')</span>';
+      }
+      html += renderFieldRow(t('bolt11_expiry'), expiryStr);
+      html += renderFieldRow(t('bolt11_valid_until'), expiryDate.toISOString().replace('T', ' ').replace(/\.000Z$/, ' UTC'));
+    }
+    html += '</div>';
+
+    html += '<div class="psbt-section"><div class="psbt-section-title">Payment Details</div>';
+    if (result.paymentHash) {
+      html += renderFieldRow(t('bolt11_payment_hash'), renderHexValue2(result.paymentHash));
+    }
+    if (result.description !== null) {
+      html += renderFieldRow(t('bolt11_description'), '<span style="word-break:break-all">' + escHtml(result.description) + '</span>');
+    }
+    if (result.descriptionHash) {
+      html += renderFieldRow(t('bolt11_desc_hash'), renderHexValue2(result.descriptionHash));
+    }
+    if (result.payee) {
+      html += renderFieldRow(t('bolt11_payee'), renderHexValue2(result.payee));
+    }
+    if (result.paymentSecret) {
+      html += renderFieldRow(t('bolt11_payment_secret'), renderHexValue2(result.paymentSecret));
+    }
+    if (result.minCltvExpiry !== null) {
+      html += renderFieldRow(t('bolt11_min_cltv'), String(result.minCltvExpiry) + ' blocks');
+    }
+    if (result.metadata) {
+      html += renderFieldRow(t('bolt11_metadata'), renderHexValue2(result.metadata));
+    }
+    html += '</div>';
+
+    if (result.featureBits) {
+      html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_feature_bits') + '</div>';
+      html += renderFieldRow('Hex', renderHexValue2(result.featureBits));
+      var featureBytes = [];
+      for (var fi = 0; fi < result.featureBits.length; fi += 2) {
+        featureBytes.push(parseInt(result.featureBits.substr(fi, 2), 16));
+      }
+      var bitStr = featureBytes.map(function(b) { return b.toString(2).padStart(8, '0'); }).join('');
+      var bits = bitStr.split('').reverse().join('');
+      var KNOWN_FEATURES = {
+        0: 'data_loss_protect', 1: 'data_loss_protect',
+        4: 'upfront_shutdown_script', 5: 'upfront_shutdown_script',
+        8: 'gossip_queries', 9: 'gossip_queries',
+        12: 'payment_secret', 13: 'payment_secret',
+        14: 'basic_mpp', 15: 'basic_mpp',
+        16: 'option_support_large_channel', 17: 'option_support_large_channel',
+        48: 'payment_metadata', 49: 'payment_metadata',
+      };
+      var features = [];
+      for (var bi = 0; bi < bits.length; bi++) {
+        if (bits[bi] === '1') {
+          var fName = KNOWN_FEATURES[bi] || 'unknown';
+          var fType = bi % 2 === 0 ? 'compulsory' : 'optional';
+          features.push('bit ' + bi + ': ' + fName + ' (' + fType + ')');
+        }
+      }
+      if (features.length > 0) {
+        html += renderFieldRow('Features', features.join('<br>'));
+      }
+      html += '</div>';
+    }
+
+    if (result.routeHints.length > 0) {
+      html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_route_hints') + ' (' + result.routeHints.length + ')</div>';
+      result.routeHints.forEach(function(rh, idx) {
+        html += '<div class="psbt-subsection"><div class="psbt-subsection-title">Hop #' + idx + '</div>';
+        html += renderFieldRow(t('bolt11_route_pubkey'), renderHexValue2(rh.pubkey));
+        html += renderFieldRow(t('bolt11_route_short_id'), rh.shortChannelId);
+        html += renderFieldRow(t('bolt11_route_fee_base'), rh.feeBase.toLocaleString());
+        html += renderFieldRow(t('bolt11_route_fee_rate'), rh.feeRate.toLocaleString());
+        html += renderFieldRow(t('bolt11_route_cltv_delta'), String(rh.cltvDelta));
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_signature') + '</div>';
+    html += renderFieldRow(t('bolt11_signature'), renderHexValue2(result.signature));
+    html += renderFieldRow(t('bolt11_recovery_flag'), String(result.recoveryFlag));
+    html += '</div>';
+
+    if (result.unknownTags.length > 0) {
+      html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_unknown_tag') + '</div>';
+      result.unknownTags.forEach(function(ut) {
+        html += renderFieldRow('Tag ' + ut.tag, renderHexValue2(ut.hex));
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function decodeBolt11Action() {
+    var input = document.getElementById('bolt11-input').value.trim();
+    if (!input) return;
+    try {
+      var decoded = decodeBolt11(input);
+      var html = renderBolt11(decoded);
+      showResult('bolt11-result', html);
+    } catch (e) {
+      showResult('bolt11-result', '<span class="err">' + escHtml(e.message) + '</span>', true);
+    }
+  }
+
+  function loadExampleBolt11() {
+    var example = 'lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq8rkx3yf5tcsyz3d73gafnh3cax9rn449d9p5uxz9ezhhypd0elx87sjle52x86fux2ypatgddc6k63n7erqz25le42c4u4ecky03ylcqca784w';
+    document.getElementById('bolt11-input').value = example;
+    decodeBolt11Action();
+  }
+
+  document.getElementById('btn-bolt11-decode')?.addEventListener('click', decodeBolt11Action);
+  document.getElementById('btn-bolt11-example')?.addEventListener('click', loadExampleBolt11);
+  document.getElementById('bolt11-input')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) decodeBolt11Action();
+  });
+})();
+</script>
