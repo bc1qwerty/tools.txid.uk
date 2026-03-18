@@ -28,6 +28,9 @@ import LightningDecoder from '../components/tools/LightningDecoder.astro';
     <a class="learn-chip" data-slug="how-to-read-bitcoin-transaction" data-ko="트랜잭션 읽는 법" data-en="Reading Transactions" data-ja="トランザクションの読み方" href="https://learn.txid.uk/ko/blog/how-to-read-bitcoin-transaction/" target="_blank" rel="noopener">트랜잭션 읽는 법</a>
   </div>
 
+  <!-- Shared utilities must load before component scripts -->
+  <script is:inline src="/tools-shared.js"></script>
+
   <main id="main">
     <div class="hero">
       <h1>Bitcoin <span class="accent">Tools</span></h1>
@@ -48,7 +51,6 @@ import LightningDecoder from '../components/tools/LightningDecoder.astro';
     </div>
   </main>
 
-
   <footer>
     <div class="footer-inner">
       <span>&copy; 2025 txid.uk — Bitcoin Explorer</span>
@@ -56,245 +58,35 @@ import LightningDecoder from '../components/tools/LightningDecoder.astro';
     </div>
   </footer>
 
-  <!-- Shared utilities: escHtml, fetchRetry, i18n (t, setLang), theme, showResult/row/rowHtml -->
+  <!-- Theme & nav init (depends on shared utils above) -->
   <script is:inline>
-    function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-    async function fetchRetry(url,timeout,retries){for(let i=0,m=retries||2;i<=m;i++){try{return await fetch(url,{signal:AbortSignal.timeout(timeout||10000)});}catch(e){if(i>=m)throw e;await new Promise(r=>setTimeout(r,1000<<i));}}}
-
-    // ── i18n ──
-    let lang = localStorage.getItem('lang') || 'ko';
-    const LABELS = {
-      ko: {탐색기:'탐색기', 도구:'도구', 시각화:'시각화', 통계:'통계', 노드:'노드', 지도:'지도', 포트폴리오:'포트폴리오', 전송:'전송', 배우기:'배우기', 앱모음:'앱모음'},
-      en: {탐색기:'Explorer', 도구:'Tools', 시각화:'Viz', 통계:'Stats', 노드:'Nodes', 지도:'Map', 포트폴리오:'Portfolio', 전송:'TX', 배우기:'Learn', 앱모음:'Apps'},
-      ja: {탐색기:'探索', 도구:'ツール', 시각화:'可視化', 통계:'統計', 노드:'ノード', 지도:'地図', 포트폴리오:'資産', 전송:'送金', 배우기:'学習', 앱모음:'アプリ'},
-    };
-
-    const T = {
-      ko: {
-        invalid_addr: '❌ 유효하지 않은 주소 형식', valid_addr: '✓ 유효한 주소', invalid_hex: '유효한 hex를 입력하세요',
-        type: '타입', network: '네트워크', length: '길이', length_chars: '자',
-        view_explorer: '→ 탐색기에서 보기', data: '데이터', op_return_data: 'OP_RETURN (데이터)',
-        unknown_script: '알 수 없는 스크립트', unknown: '알 수 없음',
-        price_load_fail: '가격 로드 실패', retry: '재시도',
-        bech32_error: 'bc1 또는 tb1로 시작하는 Bech32 주소가 아닙니다',
-        base58_error: 'Base58 문자가 아닌 값이 포함돼 있습니다',
-        invalid_raw_hex: '유효한 Raw TX hex를 입력하세요',
-        confirm_broadcast: '이 트랜잭션을 비트코인 메인넷에 브로드캐스트하시겠습니까?\n\n한 번 전송하면 취소할 수 없습니다.',
-        sending: '전송 중…', broadcast_ok: '✓ 브로드캐스트 성공!',
-        error_prefix: '❌ 오류: ', network_error: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-        testnet_addr: 'Testnet 주소', p2pkh_mainnet: 'P2PKH 주소 (mainnet)',
-        p2sh_mainnet: 'P2SH 주소 (mainnet)', p2pkh_testnet: 'P2PKH 주소 (testnet)',
-        wif_privkey: 'WIF 개인키', no_search_result: '검색 결과 없음',
-        light_mode: '라이트 모드로 전환', dark_mode: '다크 모드로 전환',
-        ide_waiting:'대기 중', ide_step_of:'단계', ide_stack_empty:'스택이 비어 있습니다',
-        ide_result_true:'결과: TRUE (유효한 스크립트)', ide_result_false:'결과: FALSE (무효한 스크립트)',
-        ide_result_empty:'결과: 스택이 비어 있음 (FALSE)',
-        ide_error_at:'오류 (줄 {line}): {msg}', ide_error:'오류: {msg}',
-        ide_stack_overflow:'스택 오버플로우 (최대 1000개)', ide_insufficient:'스택 항목 부족',
-        ide_disabled_op:'비활성화된 명령어', ide_verify_fail:'VERIFY 실패 — 스택 최상위가 FALSE',
-        ide_if_no_endif:'OP_IF에 대응하는 OP_ENDIF가 없습니다', ide_else_no_if:'OP_ELSE가 OP_IF 없이 사용됨',
-        ide_endif_no_if:'OP_ENDIF가 OP_IF 없이 사용됨', ide_unknown_op:'알 수 없는 명령어',
-        ide_done:'실행 완료', ide_hex:'hex', ide_num:'숫자', ide_completed_steps:'{n}단계 완료',
-        psbt_invalid:'유효한 PSBT를 입력하세요 (Base64 또는 hex)', psbt_bad_magic:'유효한 PSBT가 아닙니다 (매직 바이트 불일치)',
-        psbt_global:'글로벌 필드', psbt_input:'입력', psbt_output:'출력',
-        psbt_unsigned_tx:'서명되지 않은 트랜잭션', psbt_version:'버전', psbt_xpub:'확장 공개키 (xpub)',
-        psbt_unknown_field:'알 수 없는 필드', psbt_utxo:'UTXO',
-        psbt_non_witness_utxo:'논-위트니스 UTXO (전체 TX)', psbt_witness_utxo:'위트니스 UTXO',
-        psbt_partial_sig:'부분 서명', psbt_sighash:'Sighash 타입',
-        psbt_redeem_script:'Redeem Script', psbt_witness_script:'Witness Script',
-        psbt_bip32_derivation:'BIP32 파생 경로', psbt_final_scriptsig:'최종 ScriptSig',
-        psbt_final_witness:'최종 Witness', psbt_tx_preview:'트랜잭션 미리보기',
-        psbt_tx_version:'트랜잭션 버전', psbt_inputs_count:'입력 수', psbt_outputs_count:'출력 수',
-        psbt_prev_txid:'이전 TxID', psbt_vout:'Vout (출력 인덱스)', psbt_sequence:'Sequence',
-        psbt_value:'값', psbt_value_btc:'값 (BTC)', psbt_script_pubkey:'ScriptPubKey',
-        psbt_locktime:'Locktime', psbt_status:'서명 상태', psbt_status_unsigned:'서명 없음',
-        psbt_status_partial:'부분 서명됨', psbt_status_signed:'완전 서명됨',
-        psbt_signed:'서명됨', psbt_not_signed:'미서명', psbt_sigs_info:'서명 {have}/{need}',
-        psbt_bytes:'바이트', psbt_key:'키', psbt_val:'값', psbt_parse_error:'PSBT 파싱 오류: {msg}',
-        bolt11_invalid:'유효한 BOLT11 인보이스를 입력하세요 (lnbc 또는 lntb로 시작)',
-        bolt11_network:'네트워크', bolt11_mainnet:'메인넷 (Bitcoin)', bolt11_testnet:'테스트넷 (Bitcoin)',
-        bolt11_signet:'시그넷 (Bitcoin)', bolt11_regtest:'레그테스트 (Bitcoin)',
-        bolt11_amount:'금액', bolt11_no_amount:'금액 미지정 (가변 금액)', bolt11_timestamp:'생성 시각',
-        bolt11_payment_hash:'Payment Hash', bolt11_description:'설명 (Description)',
-        bolt11_payee:'수취인 공개키 (Payee)', bolt11_expiry:'만료 시간',
-        bolt11_expiry_val:'{n}초 ({m}분)', bolt11_min_cltv:'Min Final CLTV Expiry',
-        bolt11_desc_hash:'Description Hash', bolt11_route_hints:'경로 힌트 (Route Hints)',
-        bolt11_route_pubkey:'노드 공개키', bolt11_route_short_id:'Short Channel ID',
-        bolt11_route_fee_base:'기본 수수료 (msat)', bolt11_route_fee_rate:'수수료율 (ppm)',
-        bolt11_route_cltv_delta:'CLTV Delta', bolt11_feature_bits:'Feature Bits',
-        bolt11_signature:'서명 (Signature)', bolt11_recovery_flag:'Recovery Flag',
-        bolt11_raw_data:'Raw Data (5-bit words)', bolt11_unknown_tag:'알 수 없는 태그',
-        bolt11_expired:'만료됨', bolt11_valid_until:'유효 기간',
-        bolt11_payment_secret:'Payment Secret', bolt11_metadata:'메타데이터',
-      },
-      en: {
-        invalid_addr:'❌ Invalid address format', valid_addr:'✓ Valid address', invalid_hex:'Enter valid hex',
-        type:'Type', network:'Network', length:'Length', length_chars:'chars',
-        view_explorer:'→ View in Explorer', data:'Data', op_return_data:'OP_RETURN (Data)',
-        unknown_script:'Unknown Script', unknown:'Unknown',
-        price_load_fail:'Failed to load price', retry:'Retry',
-        bech32_error:'Not a Bech32 address starting with bc1 or tb1',
-        base58_error:'Contains non-Base58 characters',
-        invalid_raw_hex:'Enter valid Raw TX hex',
-        confirm_broadcast:'Broadcast this transaction to Bitcoin mainnet?\n\nOnce sent, it cannot be reversed.',
-        sending:'Sending…', broadcast_ok:'✓ Broadcast successful!',
-        error_prefix:'❌ Error: ', network_error:'Network error occurred. Please try again later.',
-        testnet_addr:'Testnet address', p2pkh_mainnet:'P2PKH address (mainnet)',
-        p2sh_mainnet:'P2SH address (mainnet)', p2pkh_testnet:'P2PKH address (testnet)',
-        wif_privkey:'WIF private key', no_search_result:'No results found',
-        light_mode:'Switch to light mode', dark_mode:'Switch to dark mode',
-        ide_waiting:'Waiting', ide_step_of:'Step', ide_stack_empty:'Stack is empty',
-        ide_result_true:'Result: TRUE (valid script)', ide_result_false:'Result: FALSE (invalid script)',
-        ide_result_empty:'Result: Stack is empty (FALSE)',
-        ide_error_at:'Error (line {line}): {msg}', ide_error:'Error: {msg}',
-        ide_stack_overflow:'Stack overflow (max 1000)', ide_insufficient:'Insufficient stack items',
-        ide_disabled_op:'Disabled opcode', ide_verify_fail:'VERIFY failed — top of stack is FALSE',
-        ide_if_no_endif:'OP_IF without matching OP_ENDIF', ide_else_no_if:'OP_ELSE without OP_IF',
-        ide_endif_no_if:'OP_ENDIF without OP_IF', ide_unknown_op:'Unknown opcode',
-        ide_done:'Execution complete', ide_hex:'hex', ide_num:'number', ide_completed_steps:'{n} steps completed',
-        psbt_invalid:'Enter a valid PSBT (Base64 or hex)', psbt_bad_magic:'Not a valid PSBT (magic bytes mismatch)',
-        psbt_global:'Global Fields', psbt_input:'Input', psbt_output:'Output',
-        psbt_unsigned_tx:'Unsigned Transaction', psbt_version:'Version', psbt_xpub:'Extended Public Key (xpub)',
-        psbt_unknown_field:'Unknown Field', psbt_utxo:'UTXO',
-        psbt_non_witness_utxo:'Non-Witness UTXO (Full TX)', psbt_witness_utxo:'Witness UTXO',
-        psbt_partial_sig:'Partial Signature', psbt_sighash:'Sighash Type',
-        psbt_redeem_script:'Redeem Script', psbt_witness_script:'Witness Script',
-        psbt_bip32_derivation:'BIP32 Derivation Path', psbt_final_scriptsig:'Final ScriptSig',
-        psbt_final_witness:'Final Witness', psbt_tx_preview:'Transaction Preview',
-        psbt_tx_version:'TX Version', psbt_inputs_count:'Inputs Count', psbt_outputs_count:'Outputs Count',
-        psbt_prev_txid:'Previous TxID', psbt_vout:'Vout (Output Index)', psbt_sequence:'Sequence',
-        psbt_value:'Value', psbt_value_btc:'Value (BTC)', psbt_script_pubkey:'ScriptPubKey',
-        psbt_locktime:'Locktime', psbt_status:'Signing Status', psbt_status_unsigned:'Unsigned',
-        psbt_status_partial:'Partially Signed', psbt_status_signed:'Fully Signed',
-        psbt_signed:'Signed', psbt_not_signed:'Not Signed', psbt_sigs_info:'Signatures {have}/{need}',
-        psbt_bytes:'bytes', psbt_key:'Key', psbt_val:'Value', psbt_parse_error:'PSBT parse error: {msg}',
-        bolt11_invalid:'Enter a valid BOLT11 invoice (starting with lnbc or lntb)',
-        bolt11_network:'Network', bolt11_mainnet:'Mainnet (Bitcoin)', bolt11_testnet:'Testnet (Bitcoin)',
-        bolt11_signet:'Signet (Bitcoin)', bolt11_regtest:'Regtest (Bitcoin)',
-        bolt11_amount:'Amount', bolt11_no_amount:'No amount specified (variable)', bolt11_timestamp:'Timestamp',
-        bolt11_payment_hash:'Payment Hash', bolt11_description:'Description',
-        bolt11_payee:'Payee Public Key', bolt11_expiry:'Expiry',
-        bolt11_expiry_val:'{n} seconds ({m} minutes)', bolt11_min_cltv:'Min Final CLTV Expiry',
-        bolt11_desc_hash:'Description Hash', bolt11_route_hints:'Route Hints',
-        bolt11_route_pubkey:'Node Public Key', bolt11_route_short_id:'Short Channel ID',
-        bolt11_route_fee_base:'Base Fee (msat)', bolt11_route_fee_rate:'Fee Rate (ppm)',
-        bolt11_route_cltv_delta:'CLTV Delta', bolt11_feature_bits:'Feature Bits',
-        bolt11_signature:'Signature', bolt11_recovery_flag:'Recovery Flag',
-        bolt11_raw_data:'Raw Data (5-bit words)', bolt11_unknown_tag:'Unknown Tag',
-        bolt11_expired:'Expired', bolt11_valid_until:'Valid Until',
-        bolt11_payment_secret:'Payment Secret', bolt11_metadata:'Metadata',
-      },
-      ja: {
-        invalid_addr:'❌ 無効なアドレス形式', valid_addr:'✓ 有効なアドレス', invalid_hex:'有効なhexを入力してください',
-        type:'タイプ', network:'ネットワーク', length:'長さ', length_chars:'文字',
-        view_explorer:'→ エクスプローラーで表示', data:'データ', op_return_data:'OP_RETURN (データ)',
-        unknown_script:'不明なスクリプト', unknown:'不明',
-        price_load_fail:'価格の読み込みに失敗', retry:'再試行',
-        bech32_error:'bc1またはtb1で始まるBech32アドレスではありません',
-        base58_error:'Base58以外の文字が含まれています',
-        invalid_raw_hex:'有効なRaw TX hexを入力してください',
-        confirm_broadcast:'このトランザクションをビットコインメインネットにブロードキャストしますか？\n\n一度送信すると取り消せません。',
-        sending:'送信中…', broadcast_ok:'✓ ブロードキャスト成功！',
-        error_prefix:'❌ エラー: ', network_error:'ネットワークエラーが発生しました。しばらくしてから再試行してください。',
-        testnet_addr:'Testnetアドレス', p2pkh_mainnet:'P2PKHアドレス (メインネット)',
-        p2sh_mainnet:'P2SHアドレス (メインネット)', p2pkh_testnet:'P2PKHアドレス (テストネット)',
-        wif_privkey:'WIF秘密鍵', no_search_result:'検索結果なし',
-        light_mode:'ライトモードに切替', dark_mode:'ダークモードに切替',
-        ide_waiting:'待機中', ide_step_of:'ステップ', ide_stack_empty:'スタックが空です',
-        ide_result_true:'結果: TRUE (有効なスクリプト)', ide_result_false:'結果: FALSE (無効なスクリプト)',
-        ide_result_empty:'結果: スタックが空 (FALSE)',
-        ide_error_at:'エラー (行 {line}): {msg}', ide_error:'エラー: {msg}',
-        ide_stack_overflow:'スタックオーバーフロー (最大 1000)', ide_insufficient:'スタック項目不足',
-        ide_disabled_op:'無効化されたオペコード', ide_verify_fail:'VERIFY失敗 — スタックトップがFALSE',
-        ide_if_no_endif:'OP_IFに対応するOP_ENDIFがありません', ide_else_no_if:'OP_ELSEがOP_IFなしで使用されました',
-        ide_endif_no_if:'OP_ENDIFがOP_IFなしで使用されました', ide_unknown_op:'不明なオペコード',
-        ide_done:'実行完了', ide_hex:'hex', ide_num:'数値', ide_completed_steps:'{n}ステップ完了',
-        psbt_invalid:'有効なPSBTを入力してください (Base64またはhex)', psbt_bad_magic:'有効なPSBTではありません (マジックバイト不一致)',
-        psbt_global:'グローバルフィールド', psbt_input:'入力', psbt_output:'出力',
-        psbt_unsigned_tx:'未署名トランザクション', psbt_version:'バージョン', psbt_xpub:'拡張公開鍵 (xpub)',
-        psbt_unknown_field:'不明なフィールド', psbt_utxo:'UTXO',
-        psbt_non_witness_utxo:'非ウィットネスUTXO (完全TX)', psbt_witness_utxo:'ウィットネスUTXO',
-        psbt_partial_sig:'部分署名', psbt_sighash:'Sighashタイプ',
-        psbt_redeem_script:'Redeemスクリプト', psbt_witness_script:'Witnessスクリプト',
-        psbt_bip32_derivation:'BIP32導出パス', psbt_final_scriptsig:'最終ScriptSig',
-        psbt_final_witness:'最終Witness', psbt_tx_preview:'トランザクションプレビュー',
-        psbt_tx_version:'TXバージョン', psbt_inputs_count:'入力数', psbt_outputs_count:'出力数',
-        psbt_prev_txid:'前のTxID', psbt_vout:'Vout (出力インデックス)', psbt_sequence:'Sequence',
-        psbt_value:'値', psbt_value_btc:'値 (BTC)', psbt_script_pubkey:'ScriptPubKey',
-        psbt_locktime:'Locktime', psbt_status:'署名状態', psbt_status_unsigned:'未署名',
-        psbt_status_partial:'部分署名済み', psbt_status_signed:'完全署名済み',
-        psbt_signed:'署名済み', psbt_not_signed:'未署名', psbt_sigs_info:'署名 {have}/{need}',
-        psbt_bytes:'バイト', psbt_key:'キー', psbt_val:'値', psbt_parse_error:'PSBTパースエラー: {msg}',
-        bolt11_invalid:'有効なBOLT11インボイスを入力してください (lnbcまたはlntbで始まる)',
-        bolt11_network:'ネットワーク', bolt11_mainnet:'メインネット (Bitcoin)', bolt11_testnet:'テストネット (Bitcoin)',
-        bolt11_signet:'シグネット (Bitcoin)', bolt11_regtest:'レグテスト (Bitcoin)',
-        bolt11_amount:'金額', bolt11_no_amount:'金額未指定 (可変金額)', bolt11_timestamp:'タイムスタンプ',
-        bolt11_payment_hash:'Payment Hash', bolt11_description:'説明 (Description)',
-        bolt11_payee:'受取人公開鍵 (Payee)', bolt11_expiry:'有効期限',
-        bolt11_expiry_val:'{n}秒 ({m}分)', bolt11_min_cltv:'Min Final CLTV Expiry',
-        bolt11_desc_hash:'Description Hash', bolt11_route_hints:'ルートヒント (Route Hints)',
-        bolt11_route_pubkey:'ノード公開鍵', bolt11_route_short_id:'Short Channel ID',
-        bolt11_route_fee_base:'基本手数料 (msat)', bolt11_route_fee_rate:'手数料率 (ppm)',
-        bolt11_route_cltv_delta:'CLTV Delta', bolt11_feature_bits:'Feature Bits',
-        bolt11_signature:'署名 (Signature)', bolt11_recovery_flag:'Recovery Flag',
-        bolt11_raw_data:'Raw Data (5-bit words)', bolt11_unknown_tag:'不明なタグ',
-        bolt11_expired:'期限切れ', bolt11_valid_until:'有効期間',
-        bolt11_payment_secret:'Payment Secret', bolt11_metadata:'メタデータ',
-      },
-    };
-    function t(key){ return (T[lang]&&T[lang][key]) || T.en[key] || key; }
-
-    function setLang(l){
-      lang=l; localStorage.setItem('lang',lang); document.documentElement.lang=lang;
-      const btn=document.getElementById('lang-btn');
-      if(btn) btn.textContent={ko:'KO',en:'EN',ja:'JA'}[lang]||'KO';
-      document.getElementById('lang-menu')?.classList.remove('open');
-      document.querySelectorAll('[data-ko]').forEach(el=>{
-        const val=el.dataset[lang]||el.dataset.en||el.dataset.ko;
-        if(val){
-          if(el.placeholder!==undefined) el.placeholder=val;
-          else el.textContent=val;
-        }
-      });
-      try { if(typeof renderOpcodes==='function') renderOpcodes(OPCODES); } catch(e) {}
-      try { if(typeof _ideRenderRefGrid==='function') _ideRenderRefGrid(); } catch(e) {}
-    }
-    function toggleLang(){const m=document.getElementById('lang-menu');m?.classList.toggle('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded',m?.classList.contains('open')||false);}
-    document.addEventListener('click',e=>{const m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
+    // ── Lang init ──
+    document.addEventListener('click',function(e){var m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
     (function(){setLang(lang);})();
 
     // ── Theme ──
     (function() {
-      const th = localStorage.getItem('theme') || 'dark';
-      const isDark = th !== 'light';
+      var th = localStorage.getItem('theme') || 'dark';
+      var isDark = th !== 'light';
       document.documentElement.setAttribute('data-theme', th);
-      document.getElementById('theme-btn').innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';document.getElementById('theme-btn').title=isDark?t('light_mode'):t('dark_mode');
+      var btn = document.getElementById('theme-btn');
+      if (btn) {
+        btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        btn.title=isDark?t('light_mode'):t('dark_mode');
+      }
     })();
     function updateThemeBtn(){
-      const btn=document.getElementById('theme-btn');if(!btn)return;
-      const isDark=document.documentElement.getAttribute('data-theme')!=='light';
+      var btn=document.getElementById('theme-btn');if(!btn)return;
+      var isDark=document.documentElement.getAttribute('data-theme')!=='light';
       btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
       btn.title=isDark?t('light_mode'):t('dark_mode');
     }
     function toggleTheme() {
-      const h = document.documentElement;
-      const next = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      var h = document.documentElement;
+      var next = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       h.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
       updateThemeBtn();
-    }
-
-    // ── Shared display helpers ──
-    function showResult(id, html, isError) {
-      const el = document.getElementById(id);
-      el.innerHTML = html;
-      el.className = 'tool-result show' + (isError ? ' err' : '');
-    }
-    function row(key, val) {
-      return `<div><span class="key">${escHtml(key)}:</span> <span class="val">${escHtml(val)}</span></div>`;
-    }
-    function rowHtml(key, valHtml) {
-      return `<div><span class="key">${escHtml(key)}:</span> <span class="val">${valHtml}</span></div>`;
     }
 
     // ── Nav event listeners ──
