@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Header from '@txid/ui/components/Header.astro';
-import Footer from '../components/Footer.astro';
+import Footer from '@txid/ui/components/Footer.astro';
 import '../styles/global.css';
 
 import AddressValidator from '../components/tools/AddressValidator.astro';
@@ -51,12 +51,7 @@ import LightningDecoder from '../components/tools/LightningDecoder.astro';
     </div>
   </main>
 
-  <footer>
-    <div class="footer-inner">
-      <span>&copy; 2025 txid.uk — Bitcoin Explorer</span>
-      <span data-ko="mempool.space API 사용" data-en="Powered by mempool.space API" data-ja="mempool.space API 使用">mempool.space API 사용</span>
-    </div>
-  </footer>
+  <Footer />
 
   <!-- Theme & nav init (depends on shared utils above) -->
   <script is:inline>
