@@ -1,14 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
 import Header from '@txid/ui/components/Header.astro';
-import AppBar from '@txid/ui/components/AppBar.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
 ---
 
 <Base
-  title="Bitcoin Developer Tools — Address Validator, Script Decoder | txid.uk"
-  description="비트코인 개발자 도구 모음. 주소 검증, 스크립트 디코더, Bech32/Base58 디코더, BTC 단위 변환, OP 코드 사전."
+  title="Bitcoin Developer Tools — Address Validator, Script Decoder, LN Invoice Decoder | txid.uk"
+  description="비트코인 개발자 도구 모음. 주소 검증, 스크립트 디코더, Bech32/Base58 디코더, BTC 단위 변환, OP 코드 사전, Lightning Invoice(BOLT11) 디코더."
 >
   <Header sub="Tools" />
 
@@ -104,10 +103,117 @@ import '../styles/global.css';
         </div>
       </section>
 
+      <section class="tool-card tool-card--wide" id="tool-script-ide">
+        <div class="tool-header">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <h2 data-ko="Script IDE" data-en="Script IDE" data-ja="Script IDE">Script IDE</h2>
+        </div>
+        <div class="tool-body">
+          <!-- Template selector -->
+          <div class="ide-toolbar">
+            <label class="ide-label" for="ide-template" data-ko="템플릿" data-en="Template" data-ja="テンプレート">템플릿</label>
+            <select id="ide-template" class="ide-select">
+              <option value="" data-ko="— 선택 —" data-en="— Select —" data-ja="— 選択 —">— 선택 —</option>
+              <option value="p2pkh">P2PKH</option>
+              <option value="p2sh">P2SH</option>
+              <option value="multisig">Multisig (2-of-3)</option>
+              <option value="timelock" data-ko="타임락" data-en="Time-locked" data-ja="タイムロック">타임락</option>
+              <option value="opreturn">OP_RETURN</option>
+              <option value="math" data-ko="산술 예제" data-en="Math Example" data-ja="算術の例">산술 예제</option>
+            </select>
+            <div class="ide-toolbar-right">
+              <button class="tool-btn sm ide-btn" id="btn-ide-run" data-ko="실행" data-en="Run" data-ja="実行">실행</button>
+              <button class="tool-btn sm ide-btn ide-btn-step" id="btn-ide-step" data-ko="스텝" data-en="Step" data-ja="ステップ">스텝</button>
+              <button class="tool-btn sm ide-btn ide-btn-back" id="btn-ide-back" data-ko="뒤로" data-en="Back" data-ja="戻る">뒤로</button>
+              <button class="tool-btn sm ide-btn ide-btn-reset" id="btn-ide-reset" data-ko="초기화" data-en="Reset" data-ja="リセット">초기화</button>
+            </div>
+          </div>
+
+          <div class="ide-main">
+            <!-- Editor pane -->
+            <div class="ide-editor-pane">
+              <div class="ide-editor-label" data-ko="스크립트 에디터" data-en="Script Editor" data-ja="スクリプトエディタ">스크립트 에디터</div>
+              <div class="ide-editor-wrap" id="ide-editor-wrap">
+                <div class="ide-line-numbers" id="ide-line-numbers" aria-hidden="true">1</div>
+                <div class="ide-editor-container">
+                  <pre class="ide-highlight" id="ide-highlight" aria-hidden="true"></pre>
+                  <textarea id="ide-editor" class="ide-textarea" spellcheck="false" autocomplete="off" autocapitalize="off" rows="12"
+                    placeholder="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+                    data-ko="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+                    data-en="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+                    data-ja="OP_DUP&#10;OP_HASH160&#10;&#60;pubkeyhash&#62;&#10;OP_EQUALVERIFY&#10;OP_CHECKSIG"
+                    aria-label="Bitcoin Script editor"></textarea>
+                  <div class="ide-autocomplete" id="ide-autocomplete" role="listbox" style="display:none;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stack visualizer -->
+            <div class="ide-stack-pane">
+              <div class="ide-editor-label" data-ko="스택 시각화" data-en="Stack Visualizer" data-ja="スタック可視化">스택 시각화</div>
+              <div class="ide-stack-info">
+                <span class="ide-stack-step" id="ide-step-info" data-ko="대기 중" data-en="Waiting" data-ja="待機中">대기 중</span>
+              </div>
+              <div class="ide-stack-visual" id="ide-stack-visual">
+                <div class="ide-stack-empty" data-ko="스택이 비어 있습니다" data-en="Stack is empty" data-ja="スタックが空です">스택이 비어 있습니다</div>
+              </div>
+              <div class="ide-result" id="ide-result"></div>
+            </div>
+          </div>
+
+          <!-- OP code quick ref toggle -->
+          <details class="ide-ref-details">
+            <summary class="ide-ref-summary" data-ko="OP 코드 빠른 참조" data-en="OP Code Quick Reference" data-ja="OPコード クイックリファレンス">OP 코드 빠른 참조</summary>
+            <div class="ide-ref-grid" id="ide-ref-grid"></div>
+          </details>
+        </div>
+      </section>
+
+      <section class="tool-card tool-card--wide" id="tool-psbt">
+        <div class="tool-header">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+          <h2 data-ko="PSBT 에디터" data-en="PSBT Editor" data-ja="PSBTエディタ">PSBT 에디터</h2>
+        </div>
+        <div class="tool-body">
+          <div class="psbt-input-row">
+            <textarea id="psbt-input" class="tool-input textarea" rows="4" spellcheck="false"
+              placeholder="Base64 또는 hex 형식의 PSBT 붙여넣기"
+              data-ko="Base64 또는 hex 형식의 PSBT 붙여넣기"
+              data-en="Paste PSBT in Base64 or hex format"
+              data-ja="Base64またはhex形式のPSBTを貼り付け"
+              aria-label="PSBT input"></textarea>
+            <div class="btn-row">
+              <button class="tool-btn" id="btn-psbt-decode" data-ko="디코드" data-en="Decode" data-ja="デコード">디코드</button>
+              <button class="tool-btn sm" id="btn-psbt-example" data-ko="예제 PSBT 로드" data-en="Load Example PSBT" data-ja="サンプルPSBTを読込">예제 PSBT 로드</button>
+            </div>
+          </div>
+          <div id="psbt-result" class="tool-result"></div>
+        </div>
+      </section>
+
+      <section class="tool-card tool-card--wide" id="tool-bolt11">
+        <div class="tool-header">
+          <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <h2 data-ko="LN Invoice 디코더" data-en="LN Invoice Decoder" data-ja="LNインボイスデコーダー">LN Invoice 디코더</h2>
+        </div>
+        <div class="tool-body">
+          <textarea id="bolt11-input" class="tool-input textarea" rows="3" spellcheck="false"
+            placeholder="BOLT11 인보이스 붙여넣기 (lnbc...)"
+            data-ko="BOLT11 인보이스 붙여넣기 (lnbc...)"
+            data-en="Paste BOLT11 invoice (lnbc...)"
+            data-ja="BOLT11インボイスを貼り付け (lnbc...)"
+            aria-label="BOLT11 invoice input"></textarea>
+          <div class="btn-row">
+            <button class="tool-btn" id="btn-bolt11-decode" data-ko="디코드" data-en="Decode" data-ja="デコード">디코드</button>
+            <button class="tool-btn sm" id="btn-bolt11-example" data-ko="예제 인보이스 로드" data-en="Load Example Invoice" data-ja="サンプルインボイスを読込">예제 인보이스 로드</button>
+          </div>
+          <div id="bolt11-result" class="tool-result"></div>
+        </div>
+      </section>
+
     </div>
   </main>
 
-  <AppBar activeHost="tools.txid.uk" />
 
   <footer>
     <div class="footer-inner">
@@ -161,6 +267,101 @@ import '../styles/global.css';
         no_search_result: '검색 결과 없음',
         light_mode: '라이트 모드로 전환',
         dark_mode: '다크 모드로 전환',
+        // Script IDE
+        ide_waiting: '대기 중',
+        ide_step_of: '단계',
+        ide_stack_empty: '스택이 비어 있습니다',
+        ide_result_true: '결과: TRUE (유효한 스크립트)',
+        ide_result_false: '결과: FALSE (무효한 스크립트)',
+        ide_result_empty: '결과: 스택이 비어 있음 (FALSE)',
+        ide_error_at: '오류 (줄 {line}): {msg}',
+        ide_error: '오류: {msg}',
+        ide_stack_overflow: '스택 오버플로우 (최대 1000개)',
+        ide_insufficient: '스택 항목 부족',
+        ide_disabled_op: '비활성화된 명령어',
+        ide_verify_fail: 'VERIFY 실패 — 스택 최상위가 FALSE',
+        ide_if_no_endif: 'OP_IF에 대응하는 OP_ENDIF가 없습니다',
+        ide_else_no_if: 'OP_ELSE가 OP_IF 없이 사용됨',
+        ide_endif_no_if: 'OP_ENDIF가 OP_IF 없이 사용됨',
+        ide_unknown_op: '알 수 없는 명령어',
+        ide_done: '실행 완료',
+        ide_hex: 'hex',
+        ide_num: '숫자',
+        ide_completed_steps: '{n}단계 완료',
+        // PSBT Editor
+        psbt_invalid: '유효한 PSBT를 입력하세요 (Base64 또는 hex)',
+        psbt_bad_magic: '유효한 PSBT가 아닙니다 (매직 바이트 불일치)',
+        psbt_global: '글로벌 필드',
+        psbt_input: '입력',
+        psbt_output: '출력',
+        psbt_unsigned_tx: '서명되지 않은 트랜잭션',
+        psbt_version: '버전',
+        psbt_xpub: '확장 공개키 (xpub)',
+        psbt_unknown_field: '알 수 없는 필드',
+        psbt_utxo: 'UTXO',
+        psbt_non_witness_utxo: '논-위트니스 UTXO (전체 TX)',
+        psbt_witness_utxo: '위트니스 UTXO',
+        psbt_partial_sig: '부분 서명',
+        psbt_sighash: 'Sighash 타입',
+        psbt_redeem_script: 'Redeem Script',
+        psbt_witness_script: 'Witness Script',
+        psbt_bip32_derivation: 'BIP32 파생 경로',
+        psbt_final_scriptsig: '최종 ScriptSig',
+        psbt_final_witness: '최종 Witness',
+        psbt_tx_preview: '트랜잭션 미리보기',
+        psbt_tx_version: '트랜잭션 버전',
+        psbt_inputs_count: '입력 수',
+        psbt_outputs_count: '출력 수',
+        psbt_prev_txid: '이전 TxID',
+        psbt_vout: 'Vout (출력 인덱스)',
+        psbt_sequence: 'Sequence',
+        psbt_value: '값',
+        psbt_value_btc: '값 (BTC)',
+        psbt_script_pubkey: 'ScriptPubKey',
+        psbt_locktime: 'Locktime',
+        psbt_status: '서명 상태',
+        psbt_status_unsigned: '서명 없음',
+        psbt_status_partial: '부분 서명됨',
+        psbt_status_signed: '완전 서명됨',
+        psbt_signed: '서명됨',
+        psbt_not_signed: '미서명',
+        psbt_sigs_info: '서명 {have}/{need}',
+        psbt_bytes: '바이트',
+        psbt_key: '키',
+        psbt_val: '값',
+        psbt_parse_error: 'PSBT 파싱 오류: {msg}',
+        // LN Invoice Decoder
+        bolt11_invalid: '유효한 BOLT11 인보이스를 입력하세요 (lnbc 또는 lntb로 시작)',
+        bolt11_network: '네트워크',
+        bolt11_mainnet: '메인넷 (Bitcoin)',
+        bolt11_testnet: '테스트넷 (Bitcoin)',
+        bolt11_signet: '시그넷 (Bitcoin)',
+        bolt11_regtest: '레그테스트 (Bitcoin)',
+        bolt11_amount: '금액',
+        bolt11_no_amount: '금액 미지정 (가변 금액)',
+        bolt11_timestamp: '생성 시각',
+        bolt11_payment_hash: 'Payment Hash',
+        bolt11_description: '설명 (Description)',
+        bolt11_payee: '수취인 공개키 (Payee)',
+        bolt11_expiry: '만료 시간',
+        bolt11_expiry_val: '{n}초 ({m}분)',
+        bolt11_min_cltv: 'Min Final CLTV Expiry',
+        bolt11_desc_hash: 'Description Hash',
+        bolt11_route_hints: '경로 힌트 (Route Hints)',
+        bolt11_route_pubkey: '노드 공개키',
+        bolt11_route_short_id: 'Short Channel ID',
+        bolt11_route_fee_base: '기본 수수료 (msat)',
+        bolt11_route_fee_rate: '수수료율 (ppm)',
+        bolt11_route_cltv_delta: 'CLTV Delta',
+        bolt11_feature_bits: 'Feature Bits',
+        bolt11_signature: '서명 (Signature)',
+        bolt11_recovery_flag: 'Recovery Flag',
+        bolt11_raw_data: 'Raw Data (5-bit words)',
+        bolt11_unknown_tag: '알 수 없는 태그',
+        bolt11_expired: '만료됨',
+        bolt11_valid_until: '유효 기간',
+        bolt11_payment_secret: 'Payment Secret',
+        bolt11_metadata: '메타데이터',
       },
       en: {
         invalid_addr: '❌ Invalid address format',
@@ -193,6 +394,101 @@ import '../styles/global.css';
         no_search_result: 'No results found',
         light_mode: 'Switch to light mode',
         dark_mode: 'Switch to dark mode',
+        // Script IDE
+        ide_waiting: 'Waiting',
+        ide_step_of: 'Step',
+        ide_stack_empty: 'Stack is empty',
+        ide_result_true: 'Result: TRUE (valid script)',
+        ide_result_false: 'Result: FALSE (invalid script)',
+        ide_result_empty: 'Result: Stack is empty (FALSE)',
+        ide_error_at: 'Error (line {line}): {msg}',
+        ide_error: 'Error: {msg}',
+        ide_stack_overflow: 'Stack overflow (max 1000)',
+        ide_insufficient: 'Insufficient stack items',
+        ide_disabled_op: 'Disabled opcode',
+        ide_verify_fail: 'VERIFY failed — top of stack is FALSE',
+        ide_if_no_endif: 'OP_IF without matching OP_ENDIF',
+        ide_else_no_if: 'OP_ELSE without OP_IF',
+        ide_endif_no_if: 'OP_ENDIF without OP_IF',
+        ide_unknown_op: 'Unknown opcode',
+        ide_done: 'Execution complete',
+        ide_hex: 'hex',
+        ide_num: 'number',
+        ide_completed_steps: '{n} steps completed',
+        // PSBT Editor
+        psbt_invalid: 'Enter a valid PSBT (Base64 or hex)',
+        psbt_bad_magic: 'Not a valid PSBT (magic bytes mismatch)',
+        psbt_global: 'Global Fields',
+        psbt_input: 'Input',
+        psbt_output: 'Output',
+        psbt_unsigned_tx: 'Unsigned Transaction',
+        psbt_version: 'Version',
+        psbt_xpub: 'Extended Public Key (xpub)',
+        psbt_unknown_field: 'Unknown Field',
+        psbt_utxo: 'UTXO',
+        psbt_non_witness_utxo: 'Non-Witness UTXO (Full TX)',
+        psbt_witness_utxo: 'Witness UTXO',
+        psbt_partial_sig: 'Partial Signature',
+        psbt_sighash: 'Sighash Type',
+        psbt_redeem_script: 'Redeem Script',
+        psbt_witness_script: 'Witness Script',
+        psbt_bip32_derivation: 'BIP32 Derivation Path',
+        psbt_final_scriptsig: 'Final ScriptSig',
+        psbt_final_witness: 'Final Witness',
+        psbt_tx_preview: 'Transaction Preview',
+        psbt_tx_version: 'TX Version',
+        psbt_inputs_count: 'Inputs Count',
+        psbt_outputs_count: 'Outputs Count',
+        psbt_prev_txid: 'Previous TxID',
+        psbt_vout: 'Vout (Output Index)',
+        psbt_sequence: 'Sequence',
+        psbt_value: 'Value',
+        psbt_value_btc: 'Value (BTC)',
+        psbt_script_pubkey: 'ScriptPubKey',
+        psbt_locktime: 'Locktime',
+        psbt_status: 'Signing Status',
+        psbt_status_unsigned: 'Unsigned',
+        psbt_status_partial: 'Partially Signed',
+        psbt_status_signed: 'Fully Signed',
+        psbt_signed: 'Signed',
+        psbt_not_signed: 'Not Signed',
+        psbt_sigs_info: 'Signatures {have}/{need}',
+        psbt_bytes: 'bytes',
+        psbt_key: 'Key',
+        psbt_val: 'Value',
+        psbt_parse_error: 'PSBT parse error: {msg}',
+        // LN Invoice Decoder
+        bolt11_invalid: 'Enter a valid BOLT11 invoice (starting with lnbc or lntb)',
+        bolt11_network: 'Network',
+        bolt11_mainnet: 'Mainnet (Bitcoin)',
+        bolt11_testnet: 'Testnet (Bitcoin)',
+        bolt11_signet: 'Signet (Bitcoin)',
+        bolt11_regtest: 'Regtest (Bitcoin)',
+        bolt11_amount: 'Amount',
+        bolt11_no_amount: 'No amount specified (variable)',
+        bolt11_timestamp: 'Timestamp',
+        bolt11_payment_hash: 'Payment Hash',
+        bolt11_description: 'Description',
+        bolt11_payee: 'Payee Public Key',
+        bolt11_expiry: 'Expiry',
+        bolt11_expiry_val: '{n} seconds ({m} minutes)',
+        bolt11_min_cltv: 'Min Final CLTV Expiry',
+        bolt11_desc_hash: 'Description Hash',
+        bolt11_route_hints: 'Route Hints',
+        bolt11_route_pubkey: 'Node Public Key',
+        bolt11_route_short_id: 'Short Channel ID',
+        bolt11_route_fee_base: 'Base Fee (msat)',
+        bolt11_route_fee_rate: 'Fee Rate (ppm)',
+        bolt11_route_cltv_delta: 'CLTV Delta',
+        bolt11_feature_bits: 'Feature Bits',
+        bolt11_signature: 'Signature',
+        bolt11_recovery_flag: 'Recovery Flag',
+        bolt11_raw_data: 'Raw Data (5-bit words)',
+        bolt11_unknown_tag: 'Unknown Tag',
+        bolt11_expired: 'Expired',
+        bolt11_valid_until: 'Valid Until',
+        bolt11_payment_secret: 'Payment Secret',
+        bolt11_metadata: 'Metadata',
       },
       ja: {
         invalid_addr: '❌ 無効なアドレス形式',
@@ -225,6 +521,101 @@ import '../styles/global.css';
         no_search_result: '検索結果なし',
         light_mode: 'ライトモードに切替',
         dark_mode: 'ダークモードに切替',
+        // Script IDE
+        ide_waiting: '待機中',
+        ide_step_of: 'ステップ',
+        ide_stack_empty: 'スタックが空です',
+        ide_result_true: '結果: TRUE (有効なスクリプト)',
+        ide_result_false: '結果: FALSE (無効なスクリプト)',
+        ide_result_empty: '結果: スタックが空 (FALSE)',
+        ide_error_at: 'エラー (行 {line}): {msg}',
+        ide_error: 'エラー: {msg}',
+        ide_stack_overflow: 'スタックオーバーフロー (最大 1000)',
+        ide_insufficient: 'スタック項目不足',
+        ide_disabled_op: '無効化されたオペコード',
+        ide_verify_fail: 'VERIFY失敗 — スタックトップがFALSE',
+        ide_if_no_endif: 'OP_IFに対応するOP_ENDIFがありません',
+        ide_else_no_if: 'OP_ELSEがOP_IFなしで使用されました',
+        ide_endif_no_if: 'OP_ENDIFがOP_IFなしで使用されました',
+        ide_unknown_op: '不明なオペコード',
+        ide_done: '実行完了',
+        ide_hex: 'hex',
+        ide_num: '数値',
+        ide_completed_steps: '{n}ステップ完了',
+        // PSBT Editor
+        psbt_invalid: '有効なPSBTを入力してください (Base64またはhex)',
+        psbt_bad_magic: '有効なPSBTではありません (マジックバイト不一致)',
+        psbt_global: 'グローバルフィールド',
+        psbt_input: '入力',
+        psbt_output: '出力',
+        psbt_unsigned_tx: '未署名トランザクション',
+        psbt_version: 'バージョン',
+        psbt_xpub: '拡張公開鍵 (xpub)',
+        psbt_unknown_field: '不明なフィールド',
+        psbt_utxo: 'UTXO',
+        psbt_non_witness_utxo: '非ウィットネスUTXO (完全TX)',
+        psbt_witness_utxo: 'ウィットネスUTXO',
+        psbt_partial_sig: '部分署名',
+        psbt_sighash: 'Sighashタイプ',
+        psbt_redeem_script: 'Redeemスクリプト',
+        psbt_witness_script: 'Witnessスクリプト',
+        psbt_bip32_derivation: 'BIP32導出パス',
+        psbt_final_scriptsig: '最終ScriptSig',
+        psbt_final_witness: '最終Witness',
+        psbt_tx_preview: 'トランザクションプレビュー',
+        psbt_tx_version: 'TXバージョン',
+        psbt_inputs_count: '入力数',
+        psbt_outputs_count: '出力数',
+        psbt_prev_txid: '前のTxID',
+        psbt_vout: 'Vout (出力インデックス)',
+        psbt_sequence: 'Sequence',
+        psbt_value: '値',
+        psbt_value_btc: '値 (BTC)',
+        psbt_script_pubkey: 'ScriptPubKey',
+        psbt_locktime: 'Locktime',
+        psbt_status: '署名状態',
+        psbt_status_unsigned: '未署名',
+        psbt_status_partial: '部分署名済み',
+        psbt_status_signed: '完全署名済み',
+        psbt_signed: '署名済み',
+        psbt_not_signed: '未署名',
+        psbt_sigs_info: '署名 {have}/{need}',
+        psbt_bytes: 'バイト',
+        psbt_key: 'キー',
+        psbt_val: '値',
+        psbt_parse_error: 'PSBTパースエラー: {msg}',
+        // LN Invoice Decoder
+        bolt11_invalid: '有効なBOLT11インボイスを入力してください (lnbcまたはlntbで始まる)',
+        bolt11_network: 'ネットワーク',
+        bolt11_mainnet: 'メインネット (Bitcoin)',
+        bolt11_testnet: 'テストネット (Bitcoin)',
+        bolt11_signet: 'シグネット (Bitcoin)',
+        bolt11_regtest: 'レグテスト (Bitcoin)',
+        bolt11_amount: '金額',
+        bolt11_no_amount: '金額未指定 (可変金額)',
+        bolt11_timestamp: 'タイムスタンプ',
+        bolt11_payment_hash: 'Payment Hash',
+        bolt11_description: '説明 (Description)',
+        bolt11_payee: '受取人公開鍵 (Payee)',
+        bolt11_expiry: '有効期限',
+        bolt11_expiry_val: '{n}秒 ({m}分)',
+        bolt11_min_cltv: 'Min Final CLTV Expiry',
+        bolt11_desc_hash: 'Description Hash',
+        bolt11_route_hints: 'ルートヒント (Route Hints)',
+        bolt11_route_pubkey: 'ノード公開鍵',
+        bolt11_route_short_id: 'Short Channel ID',
+        bolt11_route_fee_base: '基本手数料 (msat)',
+        bolt11_route_fee_rate: '手数料率 (ppm)',
+        bolt11_route_cltv_delta: 'CLTV Delta',
+        bolt11_feature_bits: 'Feature Bits',
+        bolt11_signature: '署名 (Signature)',
+        bolt11_recovery_flag: 'Recovery Flag',
+        bolt11_raw_data: 'Raw Data (5-bit words)',
+        bolt11_unknown_tag: '不明なタグ',
+        bolt11_expired: '期限切れ',
+        bolt11_valid_until: '有効期間',
+        bolt11_payment_secret: 'Payment Secret',
+        bolt11_metadata: 'メタデータ',
       },
     };
     function t(key){ return (T[lang]&&T[lang][key]) || T.en[key] || key; }
@@ -243,6 +634,8 @@ import '../styles/global.css';
       });
       // re-render opcodes with new lang (OPCODES may not be initialized yet on first call)
       try { if(typeof renderOpcodes==='function') renderOpcodes(OPCODES); } catch(e) {}
+      // re-render Script IDE reference
+      try { if(typeof _ideRenderRefGrid==='function') _ideRenderRefGrid(); } catch(e) {}
     }
     function toggleLang(){const m=document.getElementById('lang-menu');m?.classList.toggle('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded',m?.classList.contains('open')||false);}
     document.addEventListener('click',e=>{const m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
@@ -513,6 +906,1736 @@ import '../styles/global.css';
 
     // OP code search
     document.getElementById('op-search')?.addEventListener('input', function() { searchOpcode(this.value); });
+
+    // ── Script IDE ──
+    (function() {
+      'use strict';
+
+      // -- Opcode database --
+      var OP_CATS = { stack:'stack', crypto:'crypto', arith:'arith', logic:'logic', flow:'flow', const:'const', disabled:'disabled' };
+      var ALL_OPS = [
+        // Constants
+        {name:'OP_0',aliases:['OP_FALSE','0','FALSE'],cat:'const',desc:{ko:'0을 스택에 푸시',en:'Push 0 onto stack',ja:'0をスタックにプッシュ'},hex:'0x00'},
+        {name:'OP_1',aliases:['OP_TRUE','1','TRUE'],cat:'const',desc:{ko:'1을 스택에 푸시',en:'Push 1 onto stack',ja:'1をスタックにプッシュ'},hex:'0x51'},
+        {name:'OP_2',aliases:['2'],cat:'const',desc:{ko:'2를 스택에 푸시',en:'Push 2',ja:'2をプッシュ'},hex:'0x52'},
+        {name:'OP_3',aliases:['3'],cat:'const',desc:{ko:'3을 스택에 푸시',en:'Push 3',ja:'3をプッシュ'},hex:'0x53'},
+        {name:'OP_4',aliases:['4'],cat:'const',desc:{ko:'4를 스택에 푸시',en:'Push 4',ja:'4をプッシュ'},hex:'0x54'},
+        {name:'OP_5',aliases:['5'],cat:'const',desc:{ko:'5를 스택에 푸시',en:'Push 5',ja:'5をプッシュ'},hex:'0x55'},
+        {name:'OP_6',aliases:['6'],cat:'const',desc:{ko:'6을 스택에 푸시',en:'Push 6',ja:'6をプッシュ'},hex:'0x56'},
+        {name:'OP_7',aliases:['7'],cat:'const',desc:{ko:'7을 스택에 푸시',en:'Push 7',ja:'7をプッシュ'},hex:'0x57'},
+        {name:'OP_8',aliases:['8'],cat:'const',desc:{ko:'8을 스택에 푸시',en:'Push 8',ja:'8をプッシュ'},hex:'0x58'},
+        {name:'OP_9',aliases:['9'],cat:'const',desc:{ko:'9를 스택에 푸시',en:'Push 9',ja:'9をプッシュ'},hex:'0x59'},
+        {name:'OP_10',aliases:['10'],cat:'const',desc:{ko:'10을 스택에 푸시',en:'Push 10',ja:'10をプッシュ'},hex:'0x5a'},
+        {name:'OP_11',aliases:['11'],cat:'const',desc:{ko:'11을 스택에 푸시',en:'Push 11',ja:'11をプッシュ'},hex:'0x5b'},
+        {name:'OP_12',aliases:['12'],cat:'const',desc:{ko:'12를 스택에 푸시',en:'Push 12',ja:'12をプッシュ'},hex:'0x5c'},
+        {name:'OP_13',aliases:['13'],cat:'const',desc:{ko:'13을 스택에 푸시',en:'Push 13',ja:'13をプッシュ'},hex:'0x5d'},
+        {name:'OP_14',aliases:['14'],cat:'const',desc:{ko:'14를 스택에 푸시',en:'Push 14',ja:'14をプッシュ'},hex:'0x5e'},
+        {name:'OP_15',aliases:['15'],cat:'const',desc:{ko:'15를 스택에 푸시',en:'Push 15',ja:'15をプッシュ'},hex:'0x5f'},
+        {name:'OP_16',aliases:['16'],cat:'const',desc:{ko:'16을 스택에 푸시',en:'Push 16',ja:'16をプッシュ'},hex:'0x60'},
+        // Stack
+        {name:'OP_DUP',aliases:[],cat:'stack',desc:{ko:'스택 최상위 복제',en:'Duplicate top item',ja:'スタックトップを複製'},hex:'0x76'},
+        {name:'OP_DROP',aliases:[],cat:'stack',desc:{ko:'스택 최상위 제거',en:'Remove top item',ja:'スタックトップを削除'},hex:'0x75'},
+        {name:'OP_SWAP',aliases:[],cat:'stack',desc:{ko:'상위 2개 교환',en:'Swap top two items',ja:'上位2つを交換'},hex:'0x7c'},
+        {name:'OP_OVER',aliases:[],cat:'stack',desc:{ko:'두 번째 항목 복사',en:'Copy second item to top',ja:'2番目を上にコピー'},hex:'0x78'},
+        {name:'OP_ROT',aliases:[],cat:'stack',desc:{ko:'상위 3개 회전',en:'Rotate top three items',ja:'上位3つを回転'},hex:'0x7b'},
+        {name:'OP_2DUP',aliases:[],cat:'stack',desc:{ko:'상위 2개 복제',en:'Duplicate top two items',ja:'上位2つを複製'},hex:'0x6e'},
+        {name:'OP_PICK',aliases:[],cat:'stack',desc:{ko:'n번째 항목 복사',en:'Copy nth item to top',ja:'n番目をトップにコピー'},hex:'0x79'},
+        {name:'OP_ROLL',aliases:[],cat:'stack',desc:{ko:'n번째 항목을 맨 위로',en:'Move nth item to top',ja:'n番目をトップに移動'},hex:'0x7a'},
+        // Arithmetic
+        {name:'OP_ADD',aliases:[],cat:'arith',desc:{ko:'a + b',en:'a + b',ja:'a + b'},hex:'0x93'},
+        {name:'OP_SUB',aliases:[],cat:'arith',desc:{ko:'a - b',en:'a - b',ja:'a - b'},hex:'0x94'},
+        {name:'OP_MUL',aliases:[],cat:'disabled',desc:{ko:'a * b (비활성화됨)',en:'a * b (disabled)',ja:'a * b (無効)'},hex:'0x95'},
+        {name:'OP_1ADD',aliases:[],cat:'arith',desc:{ko:'a + 1',en:'a + 1',ja:'a + 1'},hex:'0x8b'},
+        {name:'OP_1SUB',aliases:[],cat:'arith',desc:{ko:'a - 1',en:'a - 1',ja:'a - 1'},hex:'0x8c'},
+        {name:'OP_NEGATE',aliases:[],cat:'arith',desc:{ko:'부호 반전',en:'Negate',ja:'符号反転'},hex:'0x8f'},
+        {name:'OP_ABS',aliases:[],cat:'arith',desc:{ko:'절대값',en:'Absolute value',ja:'絶対値'},hex:'0x90'},
+        // Logic
+        {name:'OP_EQUAL',aliases:[],cat:'logic',desc:{ko:'a == b → 1 또는 0',en:'a == b → 1 or 0',ja:'a == b → 1 または 0'},hex:'0x87'},
+        {name:'OP_EQUALVERIFY',aliases:[],cat:'logic',desc:{ko:'EQUAL + VERIFY',en:'EQUAL + VERIFY',ja:'EQUAL + VERIFY'},hex:'0x88'},
+        {name:'OP_NOT',aliases:[],cat:'logic',desc:{ko:'0이면 1, 아니면 0',en:'If 0 → 1, else → 0',ja:'0なら1、それ以外は0'},hex:'0x91'},
+        {name:'OP_0NOTEQUAL',aliases:[],cat:'logic',desc:{ko:'0이 아니면 1',en:'Returns 1 if not 0',ja:'0でなければ1'},hex:'0x92'},
+        {name:'OP_NUMEQUAL',aliases:[],cat:'logic',desc:{ko:'숫자 비교 (같으면 1)',en:'Numeric equal',ja:'数値比較 (等しければ1)'},hex:'0x9c'},
+        {name:'OP_LESSTHAN',aliases:[],cat:'logic',desc:{ko:'a < b',en:'a < b',ja:'a < b'},hex:'0x9f'},
+        {name:'OP_GREATERTHAN',aliases:[],cat:'logic',desc:{ko:'a > b',en:'a > b',ja:'a > b'},hex:'0xa0'},
+        // Crypto
+        {name:'OP_HASH160',aliases:[],cat:'crypto',desc:{ko:'RIPEMD160(SHA256(x))',en:'RIPEMD160(SHA256(x))',ja:'RIPEMD160(SHA256(x))'},hex:'0xa9'},
+        {name:'OP_HASH256',aliases:[],cat:'crypto',desc:{ko:'SHA256(SHA256(x))',en:'SHA256(SHA256(x))',ja:'SHA256(SHA256(x))'},hex:'0xaa'},
+        {name:'OP_SHA256',aliases:[],cat:'crypto',desc:{ko:'SHA-256 해시',en:'SHA-256 hash',ja:'SHA-256ハッシュ'},hex:'0xa8'},
+        {name:'OP_RIPEMD160',aliases:[],cat:'crypto',desc:{ko:'RIPEMD-160 해시',en:'RIPEMD-160 hash',ja:'RIPEMD-160ハッシュ'},hex:'0xa6'},
+        {name:'OP_CHECKSIG',aliases:[],cat:'crypto',desc:{ko:'서명 검증 (시뮬레이션)',en:'Verify signature (simulated)',ja:'署名検証 (シミュレーション)'},hex:'0xac'},
+        {name:'OP_CHECKMULTISIG',aliases:[],cat:'crypto',desc:{ko:'다중 서명 검증 (시뮬레이션)',en:'Multi-signature verify (simulated)',ja:'マルチシグ検証 (シミュレーション)'},hex:'0xae'},
+        {name:'OP_CHECKSIGADD',aliases:[],cat:'crypto',desc:{ko:'서명 검증 후 카운터 증가 (Tapscript)',en:'Verify sig and increment counter (Tapscript)',ja:'署名検証後カウンタ増加 (Tapscript)'},hex:'0xba'},
+        {name:'OP_CHECKLOCKTIMEVERIFY',aliases:['OP_CLTV'],cat:'flow',desc:{ko:'절대 타임락 검증',en:'Absolute timelock verify',ja:'絶対タイムロック検証'},hex:'0xb1'},
+        {name:'OP_CHECKSEQUENCEVERIFY',aliases:['OP_CSV'],cat:'flow',desc:{ko:'상대 타임락 검증',en:'Relative timelock verify',ja:'相対タイムロック検証'},hex:'0xb2'},
+        {name:'OP_NOP',aliases:[],cat:'flow',desc:{ko:'아무 동작 없음',en:'No operation',ja:'操作なし'},hex:'0x61'},
+        {name:'OP_CODESEPARATOR',aliases:[],cat:'flow',desc:{ko:'서명 해싱 구분자',en:'Signature hashing separator',ja:'署名ハッシング区切り'},hex:'0xab'},
+        // Flow
+        {name:'OP_IF',aliases:[],cat:'flow',desc:{ko:'조건이 TRUE이면 실행',en:'Execute if TRUE',ja:'TRUEなら実行'},hex:'0x63'},
+        {name:'OP_ELSE',aliases:[],cat:'flow',desc:{ko:'IF가 FALSE일 때 실행',en:'Execute if IF was FALSE',ja:'IFがFALSEのとき実行'},hex:'0x67'},
+        {name:'OP_ENDIF',aliases:[],cat:'flow',desc:{ko:'IF 블록 종료',en:'End IF block',ja:'IFブロック終了'},hex:'0x68'},
+        {name:'OP_VERIFY',aliases:[],cat:'flow',desc:{ko:'FALSE이면 스크립트 실패',en:'Fail if FALSE',ja:'FALSEならスクリプト失敗'},hex:'0x69'},
+        {name:'OP_RETURN',aliases:[],cat:'flow',desc:{ko:'스크립트를 즉시 실패',en:'Immediately fail script',ja:'スクリプトを即失敗'},hex:'0x6a'},
+      ];
+
+      // Build lookup
+      var OP_MAP = {};
+      ALL_OPS.forEach(function(op) {
+        OP_MAP[op.name] = op;
+        (op.aliases||[]).forEach(function(a) { OP_MAP[a] = op; });
+      });
+
+      // -- Templates --
+      var IDE_TEMPLATES = {
+        p2pkh: '# P2PKH (Pay-to-Public-Key-Hash)\n# scriptSig (unlocking):\n<sig>\n<pubkey>\n# scriptPubKey (locking):\nOP_DUP\nOP_HASH160\n<pubkeyhash>\nOP_EQUALVERIFY\nOP_CHECKSIG',
+        p2sh: '# P2SH (Pay-to-Script-Hash)\n# Simplified example\nOP_HASH160\n<scripthash>\nOP_EQUAL',
+        multisig: '# Multisig 2-of-3\nOP_0\n<sig1>\n<sig2>\nOP_2\n<pubkey1>\n<pubkey2>\n<pubkey3>\nOP_3\nOP_CHECKMULTISIG',
+        timelock: '# Time-locked Script\n<locktime>\nOP_CHECKLOCKTIMEVERIFY\nOP_DROP\n<pubkey>\nOP_CHECKSIG',
+        opreturn: '# OP_RETURN (Data embedding)\nOP_RETURN\n48656c6c6f20426974636f696e21',
+        math: '# Math Example\n# Push 3 and 4, add them, check if equal to 7\nOP_3\nOP_4\nOP_ADD\nOP_7\nOP_EQUAL',
+      };
+
+      // -- State --
+      var ideState = {
+        instructions: [],
+        stack: [],
+        pc: 0,          // program counter
+        history: [],     // for step-back: array of {stack, pc}
+        running: false,
+        error: null,
+        ifStack: [],     // for flow control
+      };
+
+      // -- DOM refs --
+      var $editor = document.getElementById('ide-editor');
+      var $highlight = document.getElementById('ide-highlight');
+      var $lineNums = document.getElementById('ide-line-numbers');
+      var $stackVisual = document.getElementById('ide-stack-visual');
+      var $stepInfo = document.getElementById('ide-step-info');
+      var $result = document.getElementById('ide-result');
+      var $autocomplete = document.getElementById('ide-autocomplete');
+      var $template = document.getElementById('ide-template');
+      var $refGrid = document.getElementById('ide-ref-grid');
+
+      // -- Parse script text into instructions --
+      function parseScript(text) {
+        var lines = text.split('\n');
+        var instructions = [];
+        lines.forEach(function(line, lineIdx) {
+          var trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) return; // skip empty & comments
+          // Split by spaces for multiple ops on one line
+          var tokens = trimmed.split(/\s+/);
+          tokens.forEach(function(token) {
+            if (!token) return;
+            instructions.push({ token: token.toUpperCase(), original: token, line: lineIdx });
+          });
+        });
+        return instructions;
+      }
+
+      // -- Classify a token --
+      function classifyToken(token) {
+        var upper = token.toUpperCase();
+        if (upper.startsWith('#')) return 'comment';
+        if (OP_MAP[upper]) return OP_MAP[upper].cat;
+        // Check if it's hex data (even length hex)
+        if (/^[0-9a-fA-F]+$/.test(token) && token.length % 2 === 0 && token.length >= 2) return 'data';
+        // Check for <placeholder>
+        if (token.startsWith('<') && token.endsWith('>')) return 'data';
+        return 'error';
+      }
+
+      // -- Syntax highlight --
+      function updateHighlight() {
+        var text = $editor.value;
+        var lines = text.split('\n');
+        var highlighted = lines.map(function(line) {
+          if (!line.trim()) return '\n';
+          if (line.trim().startsWith('#')) return '<span class="ide-hl-comment">' + escHtml(line) + '</span>\n';
+          // tokenize but preserve spacing
+          return line.replace(/(\S+)/g, function(match) {
+            var cat = classifyToken(match);
+            var cls = 'ide-hl-' + cat;
+            return '<span class="' + cls + '">' + escHtml(match) + '</span>';
+          }) + '\n';
+        });
+        $highlight.innerHTML = highlighted.join('');
+      }
+
+      // -- Line numbers --
+      function updateLineNumbers() {
+        var lines = $editor.value.split('\n');
+        var nums = [];
+        for (var i = 1; i <= lines.length; i++) {
+          var cls = '';
+          // If stepping, highlight current instruction's line
+          if (ideState.running && ideState.pc < ideState.instructions.length) {
+            if (ideState.instructions[ideState.pc].line === i - 1) cls = ' class="ide-ln-active"';
+          }
+          nums.push('<div' + cls + '>' + i + '</div>');
+        }
+        $lineNums.innerHTML = nums.join('');
+      }
+
+      // -- Sync scroll --
+      function syncScroll() {
+        $highlight.scrollTop = $editor.scrollTop;
+        $highlight.scrollLeft = $editor.scrollLeft;
+      }
+
+      // -- Stack value helpers --
+      function stackValToNum(val) {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'boolean') return val ? 1 : 0;
+        if (typeof val === 'string') {
+          // hex string → interpret as number if short enough
+          if (/^[0-9a-fA-F]+$/.test(val) && val.length <= 8) return parseInt(val, 16);
+          return NaN;
+        }
+        return NaN;
+      }
+      function stackValDisplay(val) {
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+        if (typeof val === 'string') {
+          if (val.length > 16) return val.slice(0, 6) + '...' + val.slice(-6);
+          return val;
+        }
+        return String(val);
+      }
+      function stackValType(val) {
+        if (typeof val === 'number') return t('ide_num');
+        if (typeof val === 'boolean') return 'bool';
+        if (typeof val === 'string') return t('ide_hex');
+        return '';
+      }
+      function isTruthy(val) {
+        if (typeof val === 'boolean') return val;
+        if (typeof val === 'number') return val !== 0;
+        if (typeof val === 'string') return val.length > 0 && !/^0+$/.test(val);
+        return false;
+      }
+
+      // -- Render stack --
+      function renderStack(animate) {
+        if (ideState.stack.length === 0) {
+          $stackVisual.innerHTML = '<div class="ide-stack-empty">' + t('ide_stack_empty') + '</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < ideState.stack.length; i++) {
+          var val = ideState.stack[i];
+          var isNew = animate && i === ideState.stack.length - 1;
+          html += '<div class="ide-stack-item' + (isNew ? ' ide-stack-item--new' : '') + '">' +
+            '<span class="ide-si-idx">' + i + '</span>' +
+            '<span class="ide-si-val">' + escHtml(stackValDisplay(val)) + '</span>' +
+            '<span class="ide-si-type">' + stackValType(val) + '</span>' +
+            '</div>';
+        }
+        $stackVisual.innerHTML = html;
+      }
+
+      // -- Render step info --
+      function renderStepInfo() {
+        if (!ideState.running) {
+          $stepInfo.textContent = t('ide_waiting');
+          return;
+        }
+        if (ideState.pc >= ideState.instructions.length) {
+          $stepInfo.textContent = t('ide_done') + ' — ' + t('ide_completed_steps').replace('{n}', ideState.pc);
+          return;
+        }
+        var instr = ideState.instructions[ideState.pc];
+        $stepInfo.textContent = t('ide_step_of') + ' ' + (ideState.pc + 1) + '/' + ideState.instructions.length + ': ' + instr.original;
+      }
+
+      // -- Show result --
+      function showIdeResult(msg, type) {
+        $result.textContent = msg;
+        $result.className = 'ide-result ide-result--' + type;
+        $result.style.display = 'block';
+      }
+      function hideIdeResult() {
+        $result.style.display = 'none';
+      }
+
+      // -- Simple hash simulation (for educational purposes) --
+      function simHash(data, algo) {
+        // Educational simulation: just return a deterministic shortened hash
+        // For a real impl we'd use SubtleCrypto but it's async
+        var str = typeof data === 'number' ? data.toString(16) : String(data);
+        var h = 0;
+        for (var i = 0; i < str.length; i++) {
+          h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+        }
+        var hex = Math.abs(h).toString(16).padStart(8, '0');
+        switch (algo) {
+          case 'sha256': return hex.repeat(8).slice(0, 64);
+          case 'hash256': return hex.repeat(8).slice(0, 64);
+          case 'ripemd160': return hex.repeat(5).slice(0, 40);
+          case 'hash160': return hex.repeat(5).slice(0, 40);
+          default: return hex;
+        }
+      }
+
+      // -- Execute a single instruction --
+      function execOne(instr, stack, ifStack) {
+        var tok = instr.token;
+        var op = OP_MAP[tok];
+
+        // Handle data pushes (hex or placeholders)
+        if (!op) {
+          if (/^[0-9A-F]+$/.test(tok) && tok.length % 2 === 0 && tok.length >= 2) {
+            if (stack.length >= 1000) return t('ide_stack_overflow');
+            stack.push(tok.toLowerCase());
+            return null;
+          }
+          if (tok.startsWith('<') && tok.endsWith('>')) {
+            // Placeholder - push as symbolic hex
+            stack.push(tok.toLowerCase());
+            return null;
+          }
+          return t('ide_unknown_op') + ': ' + instr.original;
+        }
+
+        // Disabled opcodes
+        if (op.cat === 'disabled') return t('ide_disabled_op') + ': ' + op.name;
+
+        var a, b, c, n;
+
+        switch (op.name) {
+          // Constants
+          case 'OP_0': stack.push(0); break;
+          case 'OP_1': stack.push(1); break;
+          case 'OP_2': stack.push(2); break;
+          case 'OP_3': stack.push(3); break;
+          case 'OP_4': stack.push(4); break;
+          case 'OP_5': stack.push(5); break;
+          case 'OP_6': stack.push(6); break;
+          case 'OP_7': stack.push(7); break;
+          case 'OP_8': stack.push(8); break;
+          case 'OP_9': stack.push(9); break;
+          case 'OP_10': stack.push(10); break;
+          case 'OP_11': stack.push(11); break;
+          case 'OP_12': stack.push(12); break;
+          case 'OP_13': stack.push(13); break;
+          case 'OP_14': stack.push(14); break;
+          case 'OP_15': stack.push(15); break;
+          case 'OP_16': stack.push(16); break;
+
+          // Stack operations
+          case 'OP_DUP':
+            if (stack.length < 1) return t('ide_insufficient');
+            stack.push(stack[stack.length - 1]);
+            break;
+          case 'OP_DROP':
+            if (stack.length < 1) return t('ide_insufficient');
+            stack.pop();
+            break;
+          case 'OP_SWAP':
+            if (stack.length < 2) return t('ide_insufficient');
+            a = stack[stack.length - 1]; stack[stack.length - 1] = stack[stack.length - 2]; stack[stack.length - 2] = a;
+            break;
+          case 'OP_OVER':
+            if (stack.length < 2) return t('ide_insufficient');
+            stack.push(stack[stack.length - 2]);
+            break;
+          case 'OP_ROT':
+            if (stack.length < 3) return t('ide_insufficient');
+            a = stack.splice(stack.length - 3, 1)[0];
+            stack.push(a);
+            break;
+          case 'OP_2DUP':
+            if (stack.length < 2) return t('ide_insufficient');
+            stack.push(stack[stack.length - 2], stack[stack.length - 1]);
+            break;
+          case 'OP_PICK':
+            if (stack.length < 1) return t('ide_insufficient');
+            n = stackValToNum(stack.pop());
+            if (isNaN(n) || n < 0 || n >= stack.length) return t('ide_insufficient');
+            stack.push(stack[stack.length - 1 - n]);
+            break;
+          case 'OP_ROLL':
+            if (stack.length < 1) return t('ide_insufficient');
+            n = stackValToNum(stack.pop());
+            if (isNaN(n) || n < 0 || n >= stack.length) return t('ide_insufficient');
+            a = stack.splice(stack.length - 1 - n, 1)[0];
+            stack.push(a);
+            break;
+
+          // Arithmetic
+          case 'OP_ADD':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+            stack.push(a + b);
+            break;
+          case 'OP_SUB':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+            stack.push(a - b);
+            break;
+          case 'OP_1ADD':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stackValToNum(stack.pop()); stack.push(a + 1);
+            break;
+          case 'OP_1SUB':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stackValToNum(stack.pop()); stack.push(a - 1);
+            break;
+          case 'OP_NEGATE':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stackValToNum(stack.pop()); stack.push(-a);
+            break;
+          case 'OP_ABS':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stackValToNum(stack.pop()); stack.push(Math.abs(a));
+            break;
+
+          // Logic
+          case 'OP_EQUAL':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stack.pop(); a = stack.pop();
+            stack.push(String(a) === String(b) ? 1 : 0);
+            break;
+          case 'OP_EQUALVERIFY':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stack.pop(); a = stack.pop();
+            if (String(a) !== String(b)) return t('ide_verify_fail');
+            break;
+          case 'OP_NOT':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop();
+            stack.push(isTruthy(a) ? 0 : 1);
+            break;
+          case 'OP_0NOTEQUAL':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop();
+            stack.push(isTruthy(a) ? 1 : 0);
+            break;
+          case 'OP_NUMEQUAL':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+            stack.push(a === b ? 1 : 0);
+            break;
+          case 'OP_LESSTHAN':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+            stack.push(a < b ? 1 : 0);
+            break;
+          case 'OP_GREATERTHAN':
+            if (stack.length < 2) return t('ide_insufficient');
+            b = stackValToNum(stack.pop()); a = stackValToNum(stack.pop());
+            stack.push(a > b ? 1 : 0);
+            break;
+
+          // Crypto (simulated)
+          case 'OP_SHA256':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop(); stack.push(simHash(a, 'sha256'));
+            break;
+          case 'OP_HASH256':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop(); stack.push(simHash(a, 'hash256'));
+            break;
+          case 'OP_RIPEMD160':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop(); stack.push(simHash(a, 'ripemd160'));
+            break;
+          case 'OP_HASH160':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop(); stack.push(simHash(a, 'hash160'));
+            break;
+          case 'OP_CHECKSIG':
+            // Simulated: pop sig and pubkey, always push TRUE for educational
+            if (stack.length < 2) return t('ide_insufficient');
+            stack.pop(); stack.pop();
+            stack.push(1); // simulated success
+            break;
+
+          // Flow
+          case 'OP_VERIFY':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop();
+            if (!isTruthy(a)) return t('ide_verify_fail');
+            break;
+          case 'OP_RETURN':
+            return 'OP_RETURN';
+          case 'OP_IF':
+            if (stack.length < 1) return t('ide_insufficient');
+            a = stack.pop();
+            ifStack.push(isTruthy(a));
+            break;
+          case 'OP_ELSE':
+            if (ifStack.length < 1) return t('ide_else_no_if');
+            ifStack[ifStack.length - 1] = !ifStack[ifStack.length - 1];
+            break;
+          case 'OP_ENDIF':
+            if (ifStack.length < 1) return t('ide_endif_no_if');
+            ifStack.pop();
+            break;
+
+          // Timelock (simulated - just drop and continue)
+          case 'OP_CHECKLOCKTIMEVERIFY':
+          case 'OP_CHECKSEQUENCEVERIFY':
+            if (stack.length < 1) return t('ide_insufficient');
+            // In real Bitcoin these check against tx data; here we just leave stack as-is
+            break;
+
+          // Multisig (simulated)
+          case 'OP_CHECKMULTISIG':
+            if (stack.length < 1) return t('ide_insufficient');
+            n = stackValToNum(stack.pop()); // num pubkeys
+            if (stack.length < n) return t('ide_insufficient');
+            for (var pk = 0; pk < n; pk++) stack.pop(); // pop pubkeys
+            if (stack.length < 1) return t('ide_insufficient');
+            var m = stackValToNum(stack.pop()); // num sigs needed
+            if (stack.length < m) return t('ide_insufficient');
+            for (var sg = 0; sg < m; sg++) stack.pop(); // pop sigs
+            // pop the extra OP_0 (Bitcoin bug)
+            if (stack.length > 0) stack.pop();
+            stack.push(1); // simulated success
+            break;
+
+          case 'OP_NOP':
+            break;
+          case 'OP_CODESEPARATOR':
+            break;
+          case 'OP_CHECKSIGADD':
+            if (stack.length < 3) return t('ide_insufficient');
+            a = stack.pop(); // sig
+            b = stackValToNum(stack.pop()); // n
+            c = stack.pop(); // pubkey
+            stack.push(b + 1); // simulated: always valid
+            break;
+
+          default:
+            return t('ide_unknown_op') + ': ' + op.name;
+        }
+
+        if (stack.length > 1000) return t('ide_stack_overflow');
+        return null; // success
+      }
+
+      // -- Reset IDE state --
+      function ideReset() {
+        ideState.instructions = [];
+        ideState.stack = [];
+        ideState.pc = 0;
+        ideState.history = [];
+        ideState.running = false;
+        ideState.error = null;
+        ideState.ifStack = [];
+        renderStack(false);
+        renderStepInfo();
+        hideIdeResult();
+        updateLineNumbers();
+      }
+
+      // -- Start execution (prepare) --
+      function ideStart() {
+        ideState.instructions = parseScript($editor.value);
+        ideState.stack = [];
+        ideState.pc = 0;
+        ideState.history = [];
+        ideState.running = true;
+        ideState.error = null;
+        ideState.ifStack = [];
+      }
+
+      // -- Step forward --
+      function ideStep() {
+        if (!ideState.running) {
+          ideStart();
+          if (ideState.instructions.length === 0) {
+            ideState.running = false;
+            renderStepInfo();
+            return;
+          }
+        }
+        if (ideState.pc >= ideState.instructions.length) {
+          // Already done
+          ideFinalResult();
+          return;
+        }
+        // Save state for back
+        ideState.history.push({
+          stack: ideState.stack.slice(),
+          pc: ideState.pc,
+          ifStack: ideState.ifStack.slice()
+        });
+
+        var instr = ideState.instructions[ideState.pc];
+
+        // Skip if inside a false IF branch
+        if (ideState.ifStack.length > 0 && !ideState.ifStack[ideState.ifStack.length - 1]) {
+          // Only process flow control ops
+          if (instr.token === 'OP_IF') {
+            ideState.ifStack.push(false);
+          } else if (instr.token === 'OP_ELSE') {
+            if (ideState.ifStack.length > 0) ideState.ifStack[ideState.ifStack.length - 1] = !ideState.ifStack[ideState.ifStack.length - 1];
+          } else if (instr.token === 'OP_ENDIF') {
+            if (ideState.ifStack.length > 0) ideState.ifStack.pop();
+          }
+          ideState.pc++;
+          renderStack(false);
+          renderStepInfo();
+          updateLineNumbers();
+          if (ideState.pc >= ideState.instructions.length) ideFinalResult();
+          return;
+        }
+
+        var err = execOne(instr, ideState.stack, ideState.ifStack);
+        ideState.pc++;
+
+        if (err) {
+          ideState.error = err;
+          showIdeResult(t('ide_error_at').replace('{line}', instr.line + 1).replace('{msg}', err), 'fail');
+          ideState.running = false;
+        }
+
+        renderStack(true);
+        renderStepInfo();
+        updateLineNumbers();
+
+        if (!err && ideState.pc >= ideState.instructions.length) {
+          ideFinalResult();
+        }
+      }
+
+      // -- Step backward --
+      function ideBack() {
+        if (!ideState.history || ideState.history.length === 0) return;
+        var prev = ideState.history.pop();
+        ideState.stack = prev.stack;
+        ideState.pc = prev.pc;
+        ideState.ifStack = prev.ifStack;
+        ideState.error = null;
+        ideState.running = true;
+        renderStack(false);
+        renderStepInfo();
+        updateLineNumbers();
+        hideIdeResult();
+      }
+
+      // -- Run all --
+      function ideRun() {
+        ideStart();
+        if (ideState.instructions.length === 0) {
+          ideState.running = false;
+          renderStepInfo();
+          return;
+        }
+        var maxSteps = 10000;
+        var steps = 0;
+        while (ideState.pc < ideState.instructions.length && steps < maxSteps) {
+          var instr = ideState.instructions[ideState.pc];
+
+          // Handle false IF branch
+          if (ideState.ifStack.length > 0 && !ideState.ifStack[ideState.ifStack.length - 1]) {
+            if (instr.token === 'OP_IF') ideState.ifStack.push(false);
+            else if (instr.token === 'OP_ELSE') { if (ideState.ifStack.length > 0) ideState.ifStack[ideState.ifStack.length - 1] = !ideState.ifStack[ideState.ifStack.length - 1]; }
+            else if (instr.token === 'OP_ENDIF') { if (ideState.ifStack.length > 0) ideState.ifStack.pop(); }
+            ideState.pc++;
+            steps++;
+            continue;
+          }
+
+          var err = execOne(instr, ideState.stack, ideState.ifStack);
+          ideState.pc++;
+          steps++;
+
+          if (err) {
+            ideState.error = err;
+            showIdeResult(t('ide_error_at').replace('{line}', instr.line + 1).replace('{msg}', err), 'fail');
+            ideState.running = false;
+            renderStack(false);
+            renderStepInfo();
+            updateLineNumbers();
+            return;
+          }
+        }
+
+        renderStack(false);
+        renderStepInfo();
+        updateLineNumbers();
+        ideFinalResult();
+      }
+
+      // -- Determine final result --
+      function ideFinalResult() {
+        if (ideState.error) return;
+        if (ideState.stack.length === 0) {
+          showIdeResult(t('ide_result_empty'), 'fail');
+        } else {
+          var top = ideState.stack[ideState.stack.length - 1];
+          if (isTruthy(top)) {
+            showIdeResult(t('ide_result_true'), 'ok');
+          } else {
+            showIdeResult(t('ide_result_false'), 'fail');
+          }
+        }
+      }
+
+      // -- Autocomplete --
+      var acIdx = -1;
+      var acItems = [];
+
+      function showAutocomplete(prefix) {
+        if (!prefix || prefix.length < 2) { hideAutocomplete(); return; }
+        prefix = prefix.toUpperCase();
+        acItems = ALL_OPS.filter(function(op) {
+          return op.name.indexOf(prefix) === 0 ||
+            (op.aliases && op.aliases.some(function(a) { return a.toUpperCase().indexOf(prefix) === 0; }));
+        }).slice(0, 10);
+        if (acItems.length === 0) { hideAutocomplete(); return; }
+        acIdx = 0;
+        var catLabels = {stack:'Stack',crypto:'Crypto',arith:'Arithmetic',logic:'Logic',flow:'Flow',const:'Constant',disabled:'Disabled'};
+        $autocomplete.innerHTML = acItems.map(function(op, i) {
+          return '<div class="ide-ac-item' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '">' +
+            '<span>' + escHtml(op.name) + '</span>' +
+            '<span class="ide-ac-cat">' + (catLabels[op.cat] || '') + '</span></div>';
+        }).join('');
+        $autocomplete.style.display = 'block';
+      }
+      function hideAutocomplete() {
+        $autocomplete.style.display = 'none';
+        acIdx = -1;
+        acItems = [];
+      }
+      function applyAutocomplete(idx) {
+        if (idx < 0 || idx >= acItems.length) return;
+        var op = acItems[idx];
+        var val = $editor.value;
+        var pos = $editor.selectionStart;
+        // Find start of current token
+        var before = val.slice(0, pos);
+        var tokenStart = Math.max(before.lastIndexOf('\n'), before.lastIndexOf(' ')) + 1;
+        var after = val.slice(pos);
+        var tokenEnd = after.search(/[\s\n]|$/);
+        if (tokenEnd < 0) tokenEnd = after.length;
+        $editor.value = val.slice(0, tokenStart) + op.name + after.slice(tokenEnd);
+        var newPos = tokenStart + op.name.length;
+        $editor.setSelectionRange(newPos, newPos);
+        $editor.focus();
+        hideAutocomplete();
+        updateHighlight();
+        updateLineNumbers();
+      }
+
+      // -- Populate OP code reference --
+      function renderRefGrid() {
+        if (!$refGrid) return;
+        $refGrid.innerHTML = ALL_OPS.map(function(op) {
+          return '<div class="ide-ref-item">' +
+            '<span class="ide-ref-name" data-op="' + escHtml(op.name) + '">' + escHtml(op.name) + '</span>' +
+            '<span class="ide-ref-hex">' + escHtml(op.hex) + '</span>' +
+            '<span class="ide-ref-desc">' + escHtml(op.desc[lang] || op.desc.en) + '</span></div>';
+        }).join('');
+      }
+      renderRefGrid();
+
+      // -- Event listeners --
+      $editor.addEventListener('input', function() {
+        updateHighlight();
+        updateLineNumbers();
+        // Autocomplete
+        var pos = this.selectionStart;
+        var before = this.value.slice(0, pos);
+        var tokenStart = Math.max(before.lastIndexOf('\n'), before.lastIndexOf(' ')) + 1;
+        var currentToken = before.slice(tokenStart);
+        if (currentToken.toUpperCase().startsWith('OP_') || currentToken.toUpperCase().startsWith('OP')) {
+          showAutocomplete(currentToken);
+        } else {
+          hideAutocomplete();
+        }
+      });
+
+      $editor.addEventListener('scroll', syncScroll);
+
+      $editor.addEventListener('keydown', function(e) {
+        // Tab for autocomplete or indent
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          if (acItems.length > 0 && acIdx >= 0) {
+            applyAutocomplete(acIdx);
+          } else {
+            // Insert 2 spaces
+            var s = this.selectionStart, end = this.selectionEnd;
+            this.value = this.value.slice(0, s) + '  ' + this.value.slice(end);
+            this.selectionStart = this.selectionEnd = s + 2;
+            updateHighlight();
+            updateLineNumbers();
+          }
+          return;
+        }
+        // Autocomplete navigation
+        if ($autocomplete.style.display !== 'none') {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            acIdx = Math.min(acIdx + 1, acItems.length - 1);
+            $autocomplete.querySelectorAll('.ide-ac-item').forEach(function(el, i) { el.classList.toggle('active', i === acIdx); });
+            return;
+          }
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            acIdx = Math.max(acIdx - 1, 0);
+            $autocomplete.querySelectorAll('.ide-ac-item').forEach(function(el, i) { el.classList.toggle('active', i === acIdx); });
+            return;
+          }
+          if (e.key === 'Enter') {
+            if (acItems.length > 0 && acIdx >= 0) {
+              e.preventDefault();
+              applyAutocomplete(acIdx);
+              return;
+            }
+          }
+          if (e.key === 'Escape') {
+            hideAutocomplete();
+            return;
+          }
+        }
+      });
+
+      $autocomplete.addEventListener('click', function(e) {
+        var item = e.target.closest('.ide-ac-item');
+        if (item) applyAutocomplete(parseInt(item.dataset.idx));
+      });
+
+      // Template selector
+      $template.addEventListener('change', function() {
+        var key = this.value;
+        if (key && IDE_TEMPLATES[key]) {
+          $editor.value = IDE_TEMPLATES[key];
+          updateHighlight();
+          updateLineNumbers();
+          ideReset();
+        }
+      });
+
+      // Buttons
+      document.getElementById('btn-ide-run').addEventListener('click', ideRun);
+      document.getElementById('btn-ide-step').addEventListener('click', ideStep);
+      document.getElementById('btn-ide-back').addEventListener('click', ideBack);
+      document.getElementById('btn-ide-reset').addEventListener('click', ideReset);
+
+      // Reference grid - click to insert opcode
+      $refGrid.addEventListener('click', function(e) {
+        var nameEl = e.target.closest('.ide-ref-name');
+        if (!nameEl) return;
+        var opName = nameEl.dataset.op;
+        var pos = $editor.selectionStart;
+        var val = $editor.value;
+        // Insert at cursor with newline
+        var insert = (pos > 0 && val[pos - 1] !== '\n' ? '\n' : '') + opName + '\n';
+        $editor.value = val.slice(0, pos) + insert + val.slice(pos);
+        var newPos = pos + insert.length;
+        $editor.setSelectionRange(newPos, newPos);
+        $editor.focus();
+        updateHighlight();
+        updateLineNumbers();
+      });
+
+      // Initial render
+      updateHighlight();
+      updateLineNumbers();
+      renderStack(false);
+      renderStepInfo();
+      hideIdeResult();
+
+      // Expose renderRefGrid for setLang hook
+      window._ideRenderRefGrid = renderRefGrid;
+    })();
+
+    // ── PSBT Editor ──
+    (function() {
+      'use strict';
+
+      // PSBT magic: "psbt\xff" = [0x70, 0x73, 0x62, 0x74, 0xff]
+      var PSBT_MAGIC = [0x70, 0x73, 0x62, 0x74, 0xff];
+
+      // Global key types (BIP-174)
+      var GLOBAL_TYPES = {
+        0x00: 'psbt_unsigned_tx',
+        0x01: 'psbt_xpub',
+        0xfb: 'psbt_version',
+      };
+
+      // Input key types
+      var INPUT_TYPES = {
+        0x00: 'psbt_non_witness_utxo',
+        0x01: 'psbt_witness_utxo',
+        0x02: 'psbt_partial_sig',
+        0x03: 'psbt_sighash',
+        0x04: 'psbt_redeem_script',
+        0x05: 'psbt_witness_script',
+        0x06: 'psbt_bip32_derivation',
+        0x07: 'psbt_final_scriptsig',
+        0x08: 'psbt_final_witness',
+      };
+
+      // Output key types
+      var OUTPUT_TYPES = {
+        0x00: 'psbt_redeem_script',
+        0x01: 'psbt_witness_script',
+        0x02: 'psbt_bip32_derivation',
+      };
+
+      // Sighash type names
+      var SIGHASH_NAMES = {
+        0x01: 'SIGHASH_ALL',
+        0x02: 'SIGHASH_NONE',
+        0x03: 'SIGHASH_SINGLE',
+        0x81: 'SIGHASH_ALL|ANYONECANPAY',
+        0x82: 'SIGHASH_NONE|ANYONECANPAY',
+        0x83: 'SIGHASH_SINGLE|ANYONECANPAY',
+      };
+
+      // -- Helpers --
+      function toHex(bytes) {
+        return Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+      function shortHex(hex, len) {
+        len = len || 8;
+        if (hex.length <= len * 2 + 4) return hex;
+        return hex.slice(0, len) + '...' + hex.slice(-len);
+      }
+      function reverseHex(hex) {
+        return hex.match(/.{2}/g).reverse().join('');
+      }
+      function readVarInt(bytes, offset) {
+        var first = bytes[offset];
+        if (first < 0xfd) return { value: first, size: 1 };
+        if (first === 0xfd) return { value: bytes[offset+1] | (bytes[offset+2] << 8), size: 3 };
+        if (first === 0xfe) return { value: bytes[offset+1] | (bytes[offset+2] << 8) | (bytes[offset+3] << 16) | (bytes[offset+4] << 24), size: 5 };
+        // 0xff - 8 bytes, but for PSBT we won't encounter such large values
+        return { value: bytes[offset+1] | (bytes[offset+2] << 8) | (bytes[offset+3] << 16) | (bytes[offset+4] << 24), size: 9 };
+      }
+      function readCompactSize(bytes, offset) {
+        return readVarInt(bytes, offset);
+      }
+      function readUint32LE(bytes, offset) {
+        return (bytes[offset] | (bytes[offset+1] << 8) | (bytes[offset+2] << 16) | ((bytes[offset+3] << 24) >>> 0)) >>> 0;
+      }
+      function readUint64LE(bytes, offset) {
+        // JS safe integer limit, but fine for satoshi values
+        var lo = readUint32LE(bytes, offset);
+        var hi = readUint32LE(bytes, offset + 4);
+        return lo + hi * 0x100000000;
+      }
+      function satsToBtc(sats) {
+        return (sats / 1e8).toFixed(8).replace(/\.?0+$/, '');
+      }
+
+      // -- Parse unsigned transaction --
+      function parseRawTx(bytes) {
+        var tx = { version: 0, inputs: [], outputs: [], locktime: 0 };
+        var off = 0;
+
+        tx.version = readUint32LE(bytes, off); off += 4;
+
+        // Check for segwit marker
+        var hasWitness = false;
+        if (bytes[off] === 0x00 && bytes[off+1] !== 0x00) {
+          hasWitness = true;
+          off += 2; // skip marker + flag
+        }
+
+        // Inputs
+        var vi = readCompactSize(bytes, off); off += vi.size;
+        var inputCount = vi.value;
+        for (var i = 0; i < inputCount; i++) {
+          var prevHash = toHex(bytes.slice(off, off + 32)); off += 32;
+          var vout = readUint32LE(bytes, off); off += 4;
+          var scriptLen = readCompactSize(bytes, off); off += scriptLen.size;
+          var scriptSig = toHex(bytes.slice(off, off + scriptLen.value)); off += scriptLen.value;
+          var sequence = readUint32LE(bytes, off); off += 4;
+          tx.inputs.push({ prevHash: reverseHex(prevHash), vout: vout, scriptSig: scriptSig, sequence: sequence });
+        }
+
+        // Outputs
+        vi = readCompactSize(bytes, off); off += vi.size;
+        var outputCount = vi.value;
+        for (var o = 0; o < outputCount; o++) {
+          var value = readUint64LE(bytes, off); off += 8;
+          var spkLen = readCompactSize(bytes, off); off += spkLen.size;
+          var scriptPubKey = toHex(bytes.slice(off, off + spkLen.value)); off += spkLen.value;
+          tx.outputs.push({ value: value, scriptPubKey: scriptPubKey });
+        }
+
+        // Skip witness data if present
+        if (hasWitness) {
+          for (var wi = 0; wi < inputCount; wi++) {
+            var witCount = readCompactSize(bytes, off); off += witCount.size;
+            for (var wj = 0; wj < witCount.value; wj++) {
+              var witLen = readCompactSize(bytes, off); off += witLen.size;
+              off += witLen.value;
+            }
+          }
+        }
+
+        tx.locktime = readUint32LE(bytes, off);
+        return tx;
+      }
+
+      // -- Parse a PSBT key-value map --
+      function parseMap(bytes, offset) {
+        var entries = [];
+        while (offset < bytes.length) {
+          // Read key length
+          var keyLenVi = readCompactSize(bytes, offset); offset += keyLenVi.size;
+          if (keyLenVi.value === 0) break; // separator
+
+          var keyBytes = bytes.slice(offset, offset + keyLenVi.value); offset += keyLenVi.value;
+          var keyType = keyBytes[0];
+          var keyData = keyBytes.length > 1 ? toHex(keyBytes.slice(1)) : '';
+
+          // Read value length
+          var valLenVi = readCompactSize(bytes, offset); offset += valLenVi.size;
+          var valBytes = bytes.slice(offset, offset + valLenVi.value); offset += valLenVi.value;
+
+          entries.push({ keyType: keyType, keyData: keyData, keyHex: toHex(keyBytes), value: valBytes, valueHex: toHex(valBytes) });
+        }
+        return { entries: entries, nextOffset: offset };
+      }
+
+      // -- Full PSBT parser --
+      function parsePSBT(bytes) {
+        // Check magic
+        for (var m = 0; m < 5; m++) {
+          if (bytes[m] !== PSBT_MAGIC[m]) throw new Error(t('psbt_bad_magic'));
+        }
+        var offset = 5;
+
+        // Global map
+        var globalMap = parseMap(bytes, offset);
+        offset = globalMap.nextOffset;
+
+        // Parse unsigned TX from global
+        var unsignedTx = null;
+        var psbtVersion = 0;
+        globalMap.entries.forEach(function(e) {
+          if (e.keyType === 0x00) {
+            unsignedTx = parseRawTx(e.value);
+          } else if (e.keyType === 0xfb) {
+            psbtVersion = readUint32LE(e.value, 0);
+          }
+        });
+
+        // Input maps
+        var inputCount = unsignedTx ? unsignedTx.inputs.length : 0;
+        var inputMaps = [];
+        for (var i = 0; i < inputCount; i++) {
+          var iMap = parseMap(bytes, offset);
+          offset = iMap.nextOffset;
+          inputMaps.push(iMap.entries);
+        }
+
+        // Output maps
+        var outputCount = unsignedTx ? unsignedTx.outputs.length : 0;
+        var outputMaps = [];
+        for (var o = 0; o < outputCount; o++) {
+          var oMap = parseMap(bytes, offset);
+          offset = oMap.nextOffset;
+          outputMaps.push(oMap.entries);
+        }
+
+        return {
+          globalEntries: globalMap.entries,
+          unsignedTx: unsignedTx,
+          psbtVersion: psbtVersion,
+          inputMaps: inputMaps,
+          outputMaps: outputMaps,
+        };
+      }
+
+      // -- Render functions --
+      function renderFieldRow(label, value, cls) {
+        cls = cls || '';
+        return '<div class="psbt-field' + (cls ? ' ' + cls : '') + '">' +
+          '<span class="psbt-field-label">' + escHtml(label) + '</span>' +
+          '<span class="psbt-field-value">' + value + '</span></div>';
+      }
+      function renderHexValue(hex) {
+        if (hex.length <= 32) return '<code class="psbt-hex">' + escHtml(hex) + '</code>';
+        return '<code class="psbt-hex psbt-hex-long" title="' + escHtml(hex) + '">' + escHtml(shortHex(hex, 16)) + '</code>' +
+          '<button class="psbt-expand-btn" onclick="this.previousElementSibling.textContent=this.previousElementSibling.title;this.remove();" data-ko="전체 보기" data-en="Show full" data-ja="全表示">' +
+          (lang === 'en' ? 'Show full' : lang === 'ja' ? '全表示' : '전체 보기') + '</button>';
+      }
+
+      function renderGlobal(parsed) {
+        var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_global') + '</div>';
+        parsed.globalEntries.forEach(function(e) {
+          var label = GLOBAL_TYPES[e.keyType] ? t(GLOBAL_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+          if (e.keyType === 0x00) {
+            // Unsigned TX - don't show raw hex, show parsed below
+            html += renderFieldRow(label, '<span class="psbt-tag">' + e.valueHex.length / 2 + ' ' + t('psbt_bytes') + '</span>');
+          } else if (e.keyType === 0xfb) {
+            html += renderFieldRow(label, String(readUint32LE(e.value, 0)));
+          } else {
+            html += renderFieldRow(label, renderHexValue(e.valueHex));
+            if (e.keyData) html += renderFieldRow('  ' + t('psbt_key') + ' data', renderHexValue(e.keyData));
+          }
+        });
+        html += '</div>';
+        return html;
+      }
+
+      function renderTxPreview(tx) {
+        if (!tx) return '';
+        var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_tx_preview') + '</div>';
+        html += renderFieldRow(t('psbt_tx_version'), String(tx.version));
+        html += renderFieldRow(t('psbt_inputs_count'), String(tx.inputs.length));
+        html += renderFieldRow(t('psbt_outputs_count'), String(tx.outputs.length));
+
+        tx.inputs.forEach(function(inp, i) {
+          html += '<div class="psbt-subsection"><div class="psbt-subsection-title">' + t('psbt_input') + ' #' + i + '</div>';
+          html += renderFieldRow(t('psbt_prev_txid'), renderHexValue(inp.prevHash));
+          html += renderFieldRow(t('psbt_vout'), String(inp.vout));
+          html += renderFieldRow(t('psbt_sequence'), '0x' + inp.sequence.toString(16).padStart(8, '0'));
+          html += '</div>';
+        });
+
+        tx.outputs.forEach(function(out, i) {
+          html += '<div class="psbt-subsection"><div class="psbt-subsection-title">' + t('psbt_output') + ' #' + i + '</div>';
+          html += renderFieldRow(t('psbt_value'), out.value.toLocaleString() + ' sats');
+          html += renderFieldRow(t('psbt_value_btc'), satsToBtc(out.value) + ' BTC');
+          html += renderFieldRow(t('psbt_script_pubkey'), renderHexValue(out.scriptPubKey));
+          html += '</div>';
+        });
+
+        html += renderFieldRow(t('psbt_locktime'), String(tx.locktime));
+        html += '</div>';
+        return html;
+      }
+
+      function renderInputMaps(inputMaps) {
+        if (!inputMaps.length) return '';
+        var html = '';
+        inputMaps.forEach(function(entries, i) {
+          html += '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_input') + ' #' + i + '</div>';
+          if (entries.length === 0) {
+            html += '<div class="psbt-empty">' + t('psbt_status_unsigned') + '</div>';
+          }
+          entries.forEach(function(e) {
+            var label = INPUT_TYPES[e.keyType] ? t(INPUT_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+            if (e.keyType === 0x03) {
+              // Sighash type
+              var shVal = e.value.length >= 4 ? readUint32LE(e.value, 0) : e.value[0];
+              var shName = SIGHASH_NAMES[shVal] || '0x' + shVal.toString(16);
+              html += renderFieldRow(label, shName);
+            } else if (e.keyType === 0x01) {
+              // Witness UTXO: value(8) + scriptPubKey
+              if (e.value.length >= 8) {
+                var wVal = readUint64LE(e.value, 0);
+                var wSpkLen = readCompactSize(e.value, 8);
+                var wSpk = toHex(e.value.slice(8 + wSpkLen.size, 8 + wSpkLen.size + wSpkLen.value));
+                html += renderFieldRow(label, wVal.toLocaleString() + ' sats (' + satsToBtc(wVal) + ' BTC)');
+                html += renderFieldRow('  ' + t('psbt_script_pubkey'), renderHexValue(wSpk));
+              } else {
+                html += renderFieldRow(label, renderHexValue(e.valueHex));
+              }
+            } else if (e.keyType === 0x06) {
+              // BIP32 derivation - key data is pubkey, value is fingerprint + path
+              html += renderFieldRow(label, '');
+              if (e.keyData) html += renderFieldRow('  Pubkey', renderHexValue(e.keyData));
+              if (e.value.length >= 4) {
+                var fp = toHex(e.value.slice(0, 4));
+                var pathParts = ['m'];
+                for (var pi = 4; pi + 3 < e.value.length; pi += 4) {
+                  var idx = readUint32LE(e.value, pi);
+                  pathParts.push(idx >= 0x80000000 ? (idx - 0x80000000) + "'" : String(idx));
+                }
+                html += renderFieldRow('  Fingerprint', fp);
+                html += renderFieldRow('  Path', pathParts.join('/'));
+              }
+            } else {
+              html += renderFieldRow(label, renderHexValue(e.valueHex));
+              if (e.keyData) html += renderFieldRow('  ' + t('psbt_key') + ' data', renderHexValue(e.keyData));
+            }
+          });
+          html += '</div>';
+        });
+        return html;
+      }
+
+      function renderOutputMaps(outputMaps) {
+        if (!outputMaps.length) return '';
+        var html = '';
+        outputMaps.forEach(function(entries, i) {
+          if (entries.length === 0) return;
+          html += '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_output') + ' #' + i + '</div>';
+          entries.forEach(function(e) {
+            var label = OUTPUT_TYPES[e.keyType] ? t(OUTPUT_TYPES[e.keyType]) : t('psbt_unknown_field') + ' (0x' + e.keyType.toString(16).padStart(2, '0') + ')';
+            if (e.keyType === 0x02) {
+              // BIP32 derivation
+              html += renderFieldRow(label, '');
+              if (e.keyData) html += renderFieldRow('  Pubkey', renderHexValue(e.keyData));
+              if (e.value.length >= 4) {
+                var fp = toHex(e.value.slice(0, 4));
+                var pathParts = ['m'];
+                for (var pi = 4; pi + 3 < e.value.length; pi += 4) {
+                  var idx = readUint32LE(e.value, pi);
+                  pathParts.push(idx >= 0x80000000 ? (idx - 0x80000000) + "'" : String(idx));
+                }
+                html += renderFieldRow('  Fingerprint', fp);
+                html += renderFieldRow('  Path', pathParts.join('/'));
+              }
+            } else {
+              html += renderFieldRow(label, renderHexValue(e.valueHex));
+            }
+          });
+          html += '</div>';
+        });
+        return html;
+      }
+
+      function renderSigningStatus(inputMaps) {
+        var html = '<div class="psbt-section"><div class="psbt-section-title">' + t('psbt_status') + '</div>';
+        var totalInputs = inputMaps.length;
+        var signedInputs = 0;
+
+        inputMaps.forEach(function(entries, i) {
+          var hasSig = false;
+          var hasFinal = false;
+          var sigCount = 0;
+
+          entries.forEach(function(e) {
+            if (e.keyType === 0x02) { hasSig = true; sigCount++; }
+            if (e.keyType === 0x07 || e.keyType === 0x08) { hasFinal = true; hasSig = true; }
+          });
+
+          if (hasSig || hasFinal) signedInputs++;
+
+          var statusText = hasFinal ? t('psbt_signed') + ' (finalized)' : hasSig ? t('psbt_signed') + ' (' + sigCount + ')' : t('psbt_not_signed');
+          var statusCls = hasSig ? 'psbt-status-ok' : 'psbt-status-warn';
+
+          html += '<div class="psbt-status-row">' +
+            '<span class="psbt-status-label">' + t('psbt_input') + ' #' + i + '</span>' +
+            '<span class="psbt-status-badge ' + statusCls + '">' + statusText + '</span></div>';
+        });
+
+        // Overall status
+        var overall;
+        if (signedInputs === 0) overall = t('psbt_status_unsigned');
+        else if (signedInputs < totalInputs) overall = t('psbt_status_partial');
+        else overall = t('psbt_status_signed');
+
+        var overallCls = signedInputs === 0 ? 'psbt-status-warn' : signedInputs < totalInputs ? 'psbt-status-partial' : 'psbt-status-ok';
+
+        html += '<div class="psbt-overall"><span class="psbt-overall-label">' + t('psbt_status') + ':</span> ' +
+          '<span class="psbt-status-badge ' + overallCls + '">' + overall + '</span> ' +
+          '<span class="psbt-overall-info">(' + signedInputs + '/' + totalInputs + ')</span></div>';
+
+        html += '</div>';
+        return html;
+      }
+
+      // -- Decode & render --
+      function decodePSBT() {
+        var raw = document.getElementById('psbt-input').value.trim();
+        if (!raw) return;
+
+        var bytes;
+        try {
+          // Try Base64 first
+          if (/^[A-Za-z0-9+/=\s]+$/.test(raw)) {
+            var b64 = raw.replace(/\s/g, '');
+            var bin = atob(b64);
+            bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          } else if (/^[0-9a-fA-F\s]+$/.test(raw)) {
+            // Hex
+            var hex = raw.replace(/\s/g, '');
+            bytes = new Uint8Array(hex.length / 2);
+            for (var h = 0; h < hex.length; h += 2) bytes[h / 2] = parseInt(hex.substr(h, 2), 16);
+          } else {
+            showResult('psbt-result', '<span class="err">' + t('psbt_invalid') + '</span>', true);
+            return;
+          }
+        } catch (e) {
+          showResult('psbt-result', '<span class="err">' + t('psbt_invalid') + '</span>', true);
+          return;
+        }
+
+        try {
+          var parsed = parsePSBT(bytes);
+          var html = '<div class="psbt-decoded">';
+          html += renderGlobal(parsed);
+          html += renderTxPreview(parsed.unsignedTx);
+          html += renderInputMaps(parsed.inputMaps);
+          html += renderOutputMaps(parsed.outputMaps);
+          html += renderSigningStatus(parsed.inputMaps);
+          html += '</div>';
+          showResult('psbt-result', html);
+        } catch (e) {
+          showResult('psbt-result', '<span class="err">' + t('psbt_parse_error').replace('{msg}', escHtml(e.message)) + '</span>', true);
+        }
+      }
+
+      // -- Example PSBT (a proper BIP-174 PSBT with 1 input, 2 outputs) --
+      function loadExamplePSBT() {
+        // P2WPKH input (1 BTC) → 2 outputs (0.5 BTC + 0.49 BTC change)
+        // Includes witness UTXO and BIP32 derivation paths (m/84'/0'/0'/0/0)
+        var exampleBase64 =
+          'cHNidP8BAHECAAAAAaOxxNXm9wgZIKGyw9Tl9gcYKTpLXG1+j5ChssPU5fYHAAAAAAD9' +
+          '////AoDw+gIAAAAAFgAUq2gCVRPD29L3uSqU4FgfXVD2VOdArusCAAAAABYAFB0PFyoO' +
+          'y0iu4b4fJofSljrjP3GhAAAAAAABAR8A4fUFAAAAABYAFI16PQ4cK0pZaPfm1cSzopGA' +
+          'cWJTIgYCxvwmpniQq83vEjRWeJCrze8SNFZ4kBI0VniQq83vEjQY002zP1QAAIAAAACA' +
+          'AAACAAAAAAAAAAAAACICAKvN7xI0VniQq83vEjRWeJCrze8SNFZ4kKvN7xI0VniQGNNN' +
+          'sz9UAACAAAAAgAAAAIAAAAAABQAAAAAiAgISNFZ4kKvN7xI0VniQq83vEjRWeJCrze8S' +
+          'NFZ4kKvN7xjTTbM/VAAAgAAAAIAAAACAAQAAAAMAAAAA';
+        document.getElementById('psbt-input').value = exampleBase64;
+        decodePSBT();
+      }
+
+      // -- Event bindings --
+      document.getElementById('btn-psbt-decode')?.addEventListener('click', decodePSBT);
+      document.getElementById('btn-psbt-example')?.addEventListener('click', loadExamplePSBT);
+      document.getElementById('psbt-input')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) decodePSBT();
+      });
+    })();
+
+    // ── BOLT11 Lightning Invoice Decoder ──
+    (function() {
+      'use strict';
+
+      // Bech32 charset
+      var CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+      var CHARSET_MAP = {};
+      for (var ci = 0; ci < CHARSET.length; ci++) CHARSET_MAP[CHARSET[ci]] = ci;
+
+      // Network prefixes
+      var NETWORK_PREFIXES = {
+        'lnbc': 'bolt11_mainnet',
+        'lntb': 'bolt11_testnet',
+        'lnbs': 'bolt11_signet',
+        'lnbcrt': 'bolt11_regtest',
+      };
+
+      // Amount multipliers (value in BTC)
+      var AMOUNT_MULTIPLIERS = {
+        'm': 0.001,
+        'u': 0.000001,
+        'n': 0.000000001,
+        'p': 0.000000000001,
+      };
+
+      // Convert 5-bit word array to 8-bit byte array
+      function wordsToBytes(words) {
+        var bits = 0, value = 0, bytes = [];
+        for (var i = 0; i < words.length; i++) {
+          value = (value << 5) | words[i];
+          bits += 5;
+          while (bits >= 8) {
+            bits -= 8;
+            bytes.push((value >>> bits) & 0xff);
+          }
+        }
+        return bytes;
+      }
+
+      // Convert byte array to hex string
+      function bytesToHex(bytes) {
+        return bytes.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+
+      // Parse the human-readable part to extract network and amount
+      function parseHRP(hrp) {
+        var network = null, networkKey = null, amountStr = null, amountBtc = null;
+
+        // Try longest prefix first (lnbcrt before lnbc)
+        var prefixes = ['lnbcrt', 'lntb', 'lnbs', 'lnbc'];
+        for (var pi = 0; pi < prefixes.length; pi++) {
+          if (hrp.startsWith(prefixes[pi])) {
+            networkKey = NETWORK_PREFIXES[prefixes[pi]];
+            amountStr = hrp.slice(prefixes[pi].length);
+            break;
+          }
+        }
+        if (!networkKey) return null;
+
+        if (amountStr && amountStr.length > 0) {
+          var lastChar = amountStr[amountStr.length - 1];
+          if (AMOUNT_MULTIPLIERS[lastChar] !== undefined) {
+            var numPart = amountStr.slice(0, -1);
+            var num = parseFloat(numPart);
+            if (!isNaN(num)) {
+              amountBtc = num * AMOUNT_MULTIPLIERS[lastChar];
+            }
+          } else {
+            // No multiplier means the amount is in BTC (rare but spec allows)
+            var num2 = parseFloat(amountStr);
+            if (!isNaN(num2)) amountBtc = num2;
+          }
+        }
+
+        return { networkKey: networkKey, amountBtc: amountBtc };
+      }
+
+      // Parse tagged fields from 5-bit data words
+      function parseTaggedFields(dataWords) {
+        var fields = [];
+        var pos = 0;
+
+        // First 7 words = timestamp (35 bits)
+        if (dataWords.length < 7) return { timestamp: 0, fields: fields };
+        var timestamp = 0;
+        for (var ti = 0; ti < 7; ti++) {
+          timestamp = timestamp * 32 + dataWords[ti];
+        }
+        pos = 7;
+
+        while (pos + 3 <= dataWords.length) {
+          var tag = dataWords[pos]; pos++;
+          // Data length is next 2 words (10 bits)
+          var dataLen = dataWords[pos] * 32 + dataWords[pos + 1]; pos += 2;
+
+          if (pos + dataLen > dataWords.length) break;
+
+          var tagData = dataWords.slice(pos, pos + dataLen);
+          pos += dataLen;
+
+          fields.push({ tag: tag, data: tagData });
+        }
+
+        return { timestamp: timestamp, fields: fields };
+      }
+
+      // Decode a BOLT11 invoice string
+      function decodeBolt11(invoice) {
+        invoice = invoice.trim().toLowerCase();
+
+        // Validate prefix
+        if (!invoice.startsWith('lnbc') && !invoice.startsWith('lntb') && !invoice.startsWith('lnbs')) {
+          throw new Error(t('bolt11_invalid'));
+        }
+
+        // Find the last '1' separator (bech32 convention)
+        var sepIdx = invoice.lastIndexOf('1');
+        if (sepIdx < 4) throw new Error(t('bolt11_invalid'));
+
+        var hrp = invoice.slice(0, sepIdx);
+        var dataPart = invoice.slice(sepIdx + 1);
+
+        // Parse HRP
+        var hrpInfo = parseHRP(hrp);
+        if (!hrpInfo) throw new Error(t('bolt11_invalid'));
+
+        // Strip 6-character bech32 checksum from the end
+        if (dataPart.length < 116) throw new Error(t('bolt11_invalid')); // minimum: 7 timestamp + 3 tag header + 104 sig + 6 checksum = ~120
+        dataPart = dataPart.slice(0, -6);
+
+        // Decode bech32 data part to 5-bit words
+        var dataWords = [];
+        for (var di = 0; di < dataPart.length; di++) {
+          var val = CHARSET_MAP[dataPart[di]];
+          if (val === undefined) throw new Error(t('bolt11_invalid'));
+          dataWords.push(val);
+        }
+
+        // Last 104 words (520 bits = 65 bytes) are the signature
+        var sigWords = [];
+        if (dataWords.length > 104) {
+          sigWords = dataWords.slice(dataWords.length - 104);
+          dataWords = dataWords.slice(0, dataWords.length - 104);
+        }
+
+        // Parse signature
+        var sigBytes = wordsToBytes(sigWords);
+        // Signature is 64 bytes + 1 byte recovery flag
+        var signature = bytesToHex(sigBytes.slice(0, 64));
+        var recoveryFlag = sigBytes.length > 64 ? sigBytes[64] : 0;
+
+        // Parse tagged fields
+        var parsed = parseTaggedFields(dataWords);
+
+        // Process tagged fields
+        var result = {
+          networkKey: hrpInfo.networkKey,
+          amountBtc: hrpInfo.amountBtc,
+          timestamp: parsed.timestamp,
+          signature: signature,
+          recoveryFlag: recoveryFlag,
+          paymentHash: null,
+          description: null,
+          descriptionHash: null,
+          payee: null,
+          expiry: 3600, // default 1 hour
+          minCltvExpiry: null,
+          routeHints: [],
+          featureBits: null,
+          paymentSecret: null,
+          metadata: null,
+          unknownTags: [],
+        };
+
+        parsed.fields.forEach(function(field) {
+          var bytes, hex;
+          switch (field.tag) {
+            case 1: // p = payment hash (52 words = 260 bits → 32 bytes)
+              bytes = wordsToBytes(field.data);
+              result.paymentHash = bytesToHex(bytes.slice(0, 32));
+              break;
+            case 13: // d = description (UTF-8)
+              bytes = wordsToBytes(field.data);
+              try {
+                result.description = new TextDecoder('utf-8', {fatal: false}).decode(new Uint8Array(bytes));
+              } catch(e) {
+                result.description = bytesToHex(bytes);
+              }
+              break;
+            case 19: // n = payee public key (53 words = 265 bits → 33 bytes)
+              bytes = wordsToBytes(field.data);
+              result.payee = bytesToHex(bytes.slice(0, 33));
+              break;
+            case 6: // x = expiry (seconds)
+              var expiry = 0;
+              for (var xi = 0; xi < field.data.length; xi++) {
+                expiry = expiry * 32 + field.data[xi];
+              }
+              result.expiry = expiry;
+              break;
+            case 24: // c = min_final_cltv_expiry
+              var cltv = 0;
+              for (var ci2 = 0; ci2 < field.data.length; ci2++) {
+                cltv = cltv * 32 + field.data[ci2];
+              }
+              result.minCltvExpiry = cltv;
+              break;
+            case 23: // h = description hash (52 words → 32 bytes)
+              bytes = wordsToBytes(field.data);
+              result.descriptionHash = bytesToHex(bytes.slice(0, 32));
+              break;
+            case 3: // r = route hint
+              bytes = wordsToBytes(field.data);
+              // Each route hint entry is 51 bytes: pubkey(33) + short_channel_id(8) + fee_base(4) + fee_rate(4) + cltv_delta(2)
+              var offset = 0;
+              while (offset + 51 <= bytes.length) {
+                var routePubkey = bytesToHex(bytes.slice(offset, offset + 33));
+                var shortChannelId = bytesToHex(bytes.slice(offset + 33, offset + 41));
+                var feeBase = (bytes[offset+41] << 24 | bytes[offset+42] << 16 | bytes[offset+43] << 8 | bytes[offset+44]) >>> 0;
+                var feeRate = (bytes[offset+45] << 24 | bytes[offset+46] << 16 | bytes[offset+47] << 8 | bytes[offset+48]) >>> 0;
+                var cltvDelta = (bytes[offset+49] << 8 | bytes[offset+50]);
+                result.routeHints.push({
+                  pubkey: routePubkey,
+                  shortChannelId: shortChannelId,
+                  feeBase: feeBase,
+                  feeRate: feeRate,
+                  cltvDelta: cltvDelta,
+                });
+                offset += 51;
+              }
+              break;
+            case 5: // 9 = feature bits
+              // Convert 5-bit words to a hex string representing the feature bits
+              bytes = wordsToBytes(field.data);
+              result.featureBits = bytesToHex(bytes);
+              break;
+            case 16: // s = payment secret (52 words → 32 bytes)
+              bytes = wordsToBytes(field.data);
+              result.paymentSecret = bytesToHex(bytes.slice(0, 32));
+              break;
+            case 27: // d = metadata
+              bytes = wordsToBytes(field.data);
+              result.metadata = bytesToHex(bytes);
+              break;
+            default:
+              bytes = wordsToBytes(field.data);
+              result.unknownTags.push({ tag: field.tag, hex: bytesToHex(bytes) });
+              break;
+          }
+        });
+
+        return result;
+      }
+
+      // Render decoded invoice
+      function renderBolt11(result) {
+        var html = '<div class="psbt-decoded">';
+
+        // Network
+        html += '<div class="psbt-section"><div class="psbt-section-title">Lightning Invoice (BOLT11)</div>';
+        html += renderFieldRow(t('bolt11_network'), '<span class="accent">' + t(result.networkKey) + '</span>');
+
+        // Amount
+        if (result.amountBtc !== null && result.amountBtc !== undefined) {
+          var sats = Math.round(result.amountBtc * 1e8);
+          var amountDisplay = sats.toLocaleString() + ' sats';
+          if (result.amountBtc >= 0.001) {
+            amountDisplay += ' (' + result.amountBtc.toFixed(8).replace(/\.?0+$/, '') + ' BTC)';
+          } else {
+            amountDisplay += ' (' + result.amountBtc.toFixed(11).replace(/\.?0+$/, '') + ' BTC)';
+          }
+          html += renderFieldRow(t('bolt11_amount'), '<strong>' + amountDisplay + '</strong>');
+        } else {
+          html += renderFieldRow(t('bolt11_amount'), '<em>' + t('bolt11_no_amount') + '</em>');
+        }
+
+        // Timestamp
+        if (result.timestamp) {
+          var date = new Date(result.timestamp * 1000);
+          html += renderFieldRow(t('bolt11_timestamp'), date.toISOString().replace('T', ' ').replace(/\.000Z$/, ' UTC') + ' (' + result.timestamp + ')');
+
+          // Expiry status
+          var expiryTime = result.timestamp + result.expiry;
+          var now = Math.floor(Date.now() / 1000);
+          var isExpired = now > expiryTime;
+          var expiryDate = new Date(expiryTime * 1000);
+          var expiryStr = t('bolt11_expiry_val').replace('{n}', result.expiry).replace('{m}', Math.round(result.expiry / 60));
+          if (isExpired) {
+            expiryStr += ' <span class="err" style="font-size:.85em">(' + t('bolt11_expired') + ')</span>';
+          }
+          html += renderFieldRow(t('bolt11_expiry'), expiryStr);
+          html += renderFieldRow(t('bolt11_valid_until'), expiryDate.toISOString().replace('T', ' ').replace(/\.000Z$/, ' UTC'));
+        }
+
+        html += '</div>';
+
+        // Payment details
+        html += '<div class="psbt-section"><div class="psbt-section-title">Payment Details</div>';
+
+        if (result.paymentHash) {
+          html += renderFieldRow(t('bolt11_payment_hash'), renderHexValue2(result.paymentHash));
+        }
+        if (result.description !== null) {
+          html += renderFieldRow(t('bolt11_description'), '<span style="word-break:break-all">' + escHtml(result.description) + '</span>');
+        }
+        if (result.descriptionHash) {
+          html += renderFieldRow(t('bolt11_desc_hash'), renderHexValue2(result.descriptionHash));
+        }
+        if (result.payee) {
+          html += renderFieldRow(t('bolt11_payee'), renderHexValue2(result.payee));
+        }
+        if (result.paymentSecret) {
+          html += renderFieldRow(t('bolt11_payment_secret'), renderHexValue2(result.paymentSecret));
+        }
+        if (result.minCltvExpiry !== null) {
+          html += renderFieldRow(t('bolt11_min_cltv'), String(result.minCltvExpiry) + ' blocks');
+        }
+        if (result.metadata) {
+          html += renderFieldRow(t('bolt11_metadata'), renderHexValue2(result.metadata));
+        }
+
+        html += '</div>';
+
+        // Feature bits
+        if (result.featureBits) {
+          html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_feature_bits') + '</div>';
+          html += renderFieldRow('Hex', renderHexValue2(result.featureBits));
+
+          // Parse known feature bits
+          var featureBytes = [];
+          for (var fi = 0; fi < result.featureBits.length; fi += 2) {
+            featureBytes.push(parseInt(result.featureBits.substr(fi, 2), 16));
+          }
+          // Convert to bit string (MSB first)
+          var bitStr = featureBytes.map(function(b) { return b.toString(2).padStart(8, '0'); }).join('');
+          // Reverse to get bit index 0 at position 0
+          var bits = bitStr.split('').reverse().join('');
+
+          var KNOWN_FEATURES = {
+            0: 'data_loss_protect', 1: 'data_loss_protect',
+            4: 'upfront_shutdown_script', 5: 'upfront_shutdown_script',
+            8: 'gossip_queries', 9: 'gossip_queries',
+            12: 'payment_secret', 13: 'payment_secret',
+            14: 'basic_mpp', 15: 'basic_mpp',
+            16: 'option_support_large_channel', 17: 'option_support_large_channel',
+            48: 'payment_metadata', 49: 'payment_metadata',
+          };
+          var features = [];
+          for (var bi = 0; bi < bits.length; bi++) {
+            if (bits[bi] === '1') {
+              var fName = KNOWN_FEATURES[bi] || 'unknown';
+              var fType = bi % 2 === 0 ? 'compulsory' : 'optional';
+              features.push('bit ' + bi + ': ' + fName + ' (' + fType + ')');
+            }
+          }
+          if (features.length > 0) {
+            html += renderFieldRow('Features', features.join('<br>'));
+          }
+
+          html += '</div>';
+        }
+
+        // Route hints
+        if (result.routeHints.length > 0) {
+          html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_route_hints') + ' (' + result.routeHints.length + ')</div>';
+          result.routeHints.forEach(function(rh, idx) {
+            html += '<div class="psbt-subsection"><div class="psbt-subsection-title">Hop #' + idx + '</div>';
+            html += renderFieldRow(t('bolt11_route_pubkey'), renderHexValue2(rh.pubkey));
+            html += renderFieldRow(t('bolt11_route_short_id'), rh.shortChannelId);
+            html += renderFieldRow(t('bolt11_route_fee_base'), rh.feeBase.toLocaleString());
+            html += renderFieldRow(t('bolt11_route_fee_rate'), rh.feeRate.toLocaleString());
+            html += renderFieldRow(t('bolt11_route_cltv_delta'), String(rh.cltvDelta));
+            html += '</div>';
+          });
+          html += '</div>';
+        }
+
+        // Signature
+        html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_signature') + '</div>';
+        html += renderFieldRow(t('bolt11_signature'), renderHexValue2(result.signature));
+        html += renderFieldRow(t('bolt11_recovery_flag'), String(result.recoveryFlag));
+        html += '</div>';
+
+        // Unknown tags
+        if (result.unknownTags.length > 0) {
+          html += '<div class="psbt-section"><div class="psbt-section-title">' + t('bolt11_unknown_tag') + '</div>';
+          result.unknownTags.forEach(function(ut) {
+            html += renderFieldRow('Tag ' + ut.tag, renderHexValue2(ut.hex));
+          });
+          html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }
+
+      // Re-use PSBT field rendering style
+      function renderFieldRow(label, value) {
+        return '<div class="psbt-field">' +
+          '<span class="psbt-field-label">' + escHtml(label) + '</span>' +
+          '<span class="psbt-field-value">' + value + '</span></div>';
+      }
+      function renderHexValue2(hex) {
+        if (!hex) return '';
+        if (hex.length <= 32) return '<code class="psbt-hex">' + escHtml(hex) + '</code>';
+        return '<code class="psbt-hex psbt-hex-long" title="' + escHtml(hex) + '">' +
+          escHtml(hex.slice(0, 16) + '...' + hex.slice(-16)) + '</code>' +
+          '<button class="psbt-expand-btn" onclick="this.previousElementSibling.textContent=this.previousElementSibling.title;this.remove();" data-ko="전체 보기" data-en="Show full" data-ja="全表示">' +
+          (lang === 'en' ? 'Show full' : lang === 'ja' ? '全表示' : '전체 보기') + '</button>';
+      }
+
+      // Main decode action
+      function decodeBolt11Action() {
+        var input = document.getElementById('bolt11-input').value.trim();
+        if (!input) return;
+
+        try {
+          var decoded = decodeBolt11(input);
+          var html = renderBolt11(decoded);
+          showResult('bolt11-result', html);
+        } catch (e) {
+          showResult('bolt11-result', '<span class="err">' + escHtml(e.message) + '</span>', true);
+        }
+      }
+
+      // Example invoice (from BOLT11 spec test vectors)
+      function loadExampleBolt11() {
+        // lnbc1 = no amount, mainnet; contains payment hash + description
+        var example = 'lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq8rkx3yf5tcsyz3d73gafnh3cax9rn449d9p5uxz9ezhhypd0elx87sjle52x86fux2ypatgddc6k63n7erqz25le42c4u4ecky03ylcqca784w';
+        document.getElementById('bolt11-input').value = example;
+        decodeBolt11Action();
+      }
+
+      // Event bindings
+      document.getElementById('btn-bolt11-decode')?.addEventListener('click', decodeBolt11Action);
+      document.getElementById('btn-bolt11-example')?.addEventListener('click', loadExampleBolt11);
+      document.getElementById('bolt11-input')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) decodeBolt11Action();
+      });
+    })();
 
     // ── 모바일 햄버거 메뉴 ──
     document.getElementById('hamburger-btn')?.addEventListener('click', function() {
