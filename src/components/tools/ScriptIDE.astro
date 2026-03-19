@@ -22,6 +22,7 @@
         <button class="tool-btn sm ide-btn ide-btn-step" id="btn-ide-step" data-ko="스텝" data-en="Step" data-ja="ステップ">스텝</button>
         <button class="tool-btn sm ide-btn ide-btn-back" id="btn-ide-back" data-ko="뒤로" data-en="Back" data-ja="戻る">뒤로</button>
         <button class="tool-btn sm ide-btn ide-btn-reset" id="btn-ide-reset" data-ko="초기화" data-en="Reset" data-ja="リセット">초기화</button>
+        <button class="tool-btn sm ide-btn ide-btn-share" id="btn-ide-share" data-ko="공유" data-en="Share" data-ja="共有" title="Copy share link">공유</button>
       </div>
     </div>
 
@@ -866,6 +867,103 @@
   renderStack(false);
   renderStepInfo();
   hideIdeResult();
+
+  // -- Share button --
+  var $shareBtn = document.getElementById('btn-ide-share');
+  var _shareToast = null;
+
+  function showShareToast(msg) {
+    if (!_shareToast) {
+      _shareToast = document.createElement('div');
+      _shareToast.style.cssText =
+        'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+        'background:#238636;color:#fff;padding:8px 18px;border-radius:6px;' +
+        'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+        'z-index:10000;pointer-events:none;opacity:0;transition:opacity 0.3s;' +
+        'box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+      document.body.appendChild(_shareToast);
+    }
+    _shareToast.textContent = msg;
+    _shareToast.style.opacity = '1';
+    setTimeout(function() { _shareToast.style.opacity = '0'; }, 2000);
+  }
+
+  $shareBtn.addEventListener('click', function() {
+    var script = $editor.value.trim();
+    if (!script) return;
+
+    // Encode to base64 (safe for URL)
+    var encoded;
+    try {
+      encoded = btoa(unescape(encodeURIComponent(script)));
+    } catch (e) {
+      return;
+    }
+
+    // Check URL length (keep under ~2000 chars)
+    var baseUrl = window.location.origin + window.location.pathname;
+    var shareUrl = baseUrl + '#ide=' + encoded;
+    if (shareUrl.length > 2000) {
+      var lang = document.documentElement.lang || 'en';
+      var msgs = {
+        ko: '스크립트가 너무 깁니다 (URL 길이 제한 초과)',
+        en: 'Script too long for share URL',
+        ja: 'スクリプトが長すぎます'
+      };
+      showShareToast(msgs[lang] || msgs.en);
+      return;
+    }
+
+    // Update URL hash without page reload
+    history.replaceState(null, '', '#ide=' + encoded);
+
+    // Copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(function() {
+        var lang = document.documentElement.lang || 'en';
+        var msgs = { ko: 'Copied!', en: 'Copied!', ja: 'Copied!' };
+        showShareToast(msgs[lang] || 'Copied!');
+      });
+    } else {
+      // Fallback for older browsers
+      var ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      ta.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+      document.body.removeChild(ta);
+      showShareToast('Copied!');
+    }
+  });
+
+  // -- Load from URL hash on page load --
+  function loadFromHash() {
+    var hash = window.location.hash;
+    if (!hash || hash.indexOf('#ide=') !== 0) return;
+    var encoded = hash.slice(5);
+    if (!encoded) return;
+    try {
+      var decoded = decodeURIComponent(escape(atob(encoded)));
+      $editor.value = decoded;
+      updateHighlight();
+      updateLineNumbers();
+      ideReset();
+      // Scroll to IDE section
+      var ideSection = document.getElementById('tool-script-ide');
+      if (ideSection) {
+        setTimeout(function() {
+          ideSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    } catch (e) {
+      // Invalid base64, ignore
+    }
+  }
+  loadFromHash();
+
+  // Handle hash change (e.g. navigating back/forward)
+  window.addEventListener('hashchange', loadFromHash);
 
   // Expose renderRefGrid for setLang hook
   window._ideRenderRefGrid = renderRefGrid;
