@@ -1,0 +1,112 @@
+---
+/**
+ * Shared page script for theme, lang navigation, and hamburger menu.
+ * Include this in every page after the footer.
+ */
+interface Props {
+  lang: string;
+  /** If set, setLang navigates to /<lang>/<basePath> instead of /<lang>/ */
+  basePath?: string;
+}
+const { lang, basePath } = Astro.props;
+---
+
+<script define:vars={{ pageLang: lang, basePath: basePath || '' }}>
+  window.__pageLang = pageLang;
+  window.__basePath = basePath;
+</script>
+
+<script is:inline>
+  // ── Lang init with route-based navigation ──
+  var pageLang = window.__pageLang || 'ko';
+  var basePath = window.__basePath || '';
+  var _origSetLang = setLang;
+  setLang = function(l) {
+    lang = l; localStorage.setItem('lang', lang);
+    var target = '/' + lang + '/' + (basePath ? basePath + '/' : '');
+    if (window.location.pathname !== target) {
+      window.location.href = target;
+      return;
+    }
+    _origSetLang(l);
+  };
+
+  document.addEventListener('click',function(e){var m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
+
+  // If stored lang differs from page lang, navigate
+  if (lang !== pageLang && ['ko', 'en', 'ja'].indexOf(lang) >= 0) {
+    window.location.href = '/' + lang + '/' + (basePath ? basePath + '/' : '');
+  }
+  (function(){setLang(lang);})();
+
+  // ── Theme ──
+  (function() {
+    var th = localStorage.getItem('theme') || 'dark';
+    var isDark = th !== 'light';
+    document.documentElement.setAttribute('data-theme', th);
+    var btn = document.getElementById('theme-btn');
+    if (btn) {
+      btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      btn.title=isDark?t('light_mode'):t('dark_mode');
+    }
+  })();
+  function updateThemeBtn(){
+    var btn=document.getElementById('theme-btn');if(!btn)return;
+    var isDark=document.documentElement.getAttribute('data-theme')!=='light';
+    btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    btn.title=isDark?t('light_mode'):t('dark_mode');
+  }
+  function toggleTheme() {
+    var h = document.documentElement;
+    var next = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    h.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeBtn();
+  }
+
+  // ── Nav event listeners ──
+  document.getElementById('lang-btn')?.addEventListener('click', toggleLang);
+  document.querySelectorAll('#lang-menu button').forEach(function(btn) {
+    var l = btn.textContent === '한국어' ? 'ko' : btn.textContent === 'English' ? 'en' : 'ja';
+    btn.addEventListener('click', function() { setLang(l); });
+  });
+  document.getElementById('theme-btn')?.addEventListener('click', toggleTheme);
+
+  // ── Mobile hamburger menu ──
+  document.getElementById('hamburger-btn')?.addEventListener('click', function() {
+    var panel = document.getElementById('hamburger-panel');
+    if (!panel) return;
+    var open = panel.classList.toggle('open');
+    this.setAttribute('aria-expanded', open);
+    if (open) updateHamburger();
+  });
+  document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.hamburger-wrap');
+    var panel = document.getElementById('hamburger-panel');
+    if (wrap && panel && !wrap.contains(e.target)) {
+      panel.classList.remove('open');
+      document.getElementById('hamburger-btn')?.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.querySelectorAll('#hamburger-panel .settings-lang-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setLang(btn.dataset.lang);
+      document.getElementById('hamburger-panel')?.classList.remove('open');
+      document.getElementById('hamburger-btn')?.setAttribute('aria-expanded', 'false');
+    });
+  });
+  document.getElementById('hamburger-theme-btn')?.addEventListener('click', function() {
+    toggleTheme();
+    updateHamburger();
+  });
+  function updateHamburger() {
+    var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    var icon = document.getElementById('hamburger-theme-icon');
+    if (icon) icon.innerHTML = isDark
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    document.querySelectorAll('#hamburger-panel .settings-lang-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.lang === lang);
+    });
+  }
+</script>

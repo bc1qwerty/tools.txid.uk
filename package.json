@@ -12,7 +12,10 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/preact": "^5.0.2",
+    "@astrojs/sitemap": "^3.7.1",
     "@txid/ui": "file:./packages/txid-ui",
-    "astro": "^6.0.5"
+    "astro": "^6.0.5",
+    "preact": "^10.29.0"
   }
 }

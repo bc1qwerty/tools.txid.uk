@@ -2,17 +2,9 @@
 import Base from '../../layouts/Base.astro';
 import Header from '@txid/ui/components/Header.astro';
 import Footer from '@txid/ui/components/Footer.astro';
+import PageScript from '../../components/PageScript.astro';
 import '../../styles/global.css';
-
-import AddressValidator from '../../components/tools/AddressValidator.astro';
-import ScriptDecoder from '../../components/tools/ScriptDecoder.astro';
-import UnitConverter from '../../components/tools/UnitConverter.astro';
-import Bech32Decoder from '../../components/tools/Bech32Decoder.astro';
-import TxBroadcast from '../../components/tools/TxBroadcast.astro';
-import OpCodeRef from '../../components/tools/OpCodeRef.astro';
-import ScriptIDE from '../../components/tools/ScriptIDE.astro';
-import PSBTEditor from '../../components/tools/PSBTEditor.astro';
-import LightningDecoder from '../../components/tools/LightningDecoder.astro';
+import { TOOLS, TOOL_LABELS, TOOL_SHORT_DESC } from '../../data/tools-meta';
 
 export function getStaticPaths() {
   return [
@@ -51,6 +43,7 @@ const learnLangPrefix = lang === 'en' ? 'en' : lang === 'ja' ? 'ja' : 'ko';
   title={titles[lang!] || titles.en}
   description={descriptions[lang!] || descriptions.en}
   lang={lang!}
+  canonicalPath={`/${lang}/`}
 >
   <Header sub="Tools" />
 
@@ -61,7 +54,7 @@ const learnLangPrefix = lang === 'en' ? 'en' : lang === 'ja' ? 'ja' : 'ko';
     <a class="learn-chip" data-slug="how-to-read-bitcoin-transaction" href={`https://learn.txid.uk/${learnLangPrefix}/blog/how-to-read-bitcoin-transaction/`} target="_blank" rel="noopener">{tx('txChip')}</a>
   </div>
 
-  <!-- Shared utilities must load before component scripts -->
+  <!-- Shared utilities for setLang/t functions -->
   <script is:inline src="/tools-shared.js"></script>
 
   <main id="main">
@@ -69,119 +62,98 @@ const learnLangPrefix = lang === 'en' ? 'en' : lang === 'ja' ? 'ja' : 'ko';
       <h1>Bitcoin <span class="accent">Tools</span></h1>
       <p class="hero-sub">{tx('heroSub')}</p>
     </div>
-    <div class="tools-grid">
-
-      <AddressValidator />
-      <ScriptDecoder />
-      <UnitConverter />
-      <Bech32Decoder />
-      <TxBroadcast />
-      <OpCodeRef />
-      <ScriptIDE />
-      <PSBTEditor />
-      <LightningDecoder />
-
+    <div class="tools-directory">
+      {TOOLS.map((tool) => (
+        <a href={`/${lang}/${tool.slug}/`} class="tool-dir-card">
+          <div class="tool-dir-icon">
+            <svg class="tool-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <Fragment set:html={tool.icon} />
+            </svg>
+          </div>
+          <div class="tool-dir-info">
+            <h2 class="tool-dir-name">{TOOL_LABELS[tool.slug][lang!] || TOOL_LABELS[tool.slug].en}</h2>
+            <p class="tool-dir-desc">{TOOL_SHORT_DESC[tool.slug][lang!] || TOOL_SHORT_DESC[tool.slug].en}</p>
+          </div>
+          <svg class="tool-dir-arrow" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      ))}
     </div>
   </main>
 
   <Footer />
-
-  <script define:vars={{ pageLang: lang }}>
-    window.__pageLang = pageLang;
-  </script>
-
-  <!-- Theme & nav init (depends on shared utils above) -->
-  <script is:inline>
-    // ── Lang init with route-based navigation ──
-    var pageLang = window.__pageLang || 'ko';
-    var _origSetLang = setLang;
-    setLang = function(l) {
-      lang = l; localStorage.setItem('lang', lang);
-      var target = '/' + lang + '/';
-      if (window.location.pathname !== target) {
-        window.location.href = target;
-        return;
-      }
-      _origSetLang(l);
-    };
-
-    document.addEventListener('click',function(e){var m=document.getElementById('lang-menu');if(m&&!e.target.closest('.lang-dropdown')){m.classList.remove('open');document.getElementById('lang-btn')?.setAttribute('aria-expanded','false');}});
-
-    // If stored lang differs from page lang, navigate
-    if (lang !== pageLang && ['ko', 'en', 'ja'].indexOf(lang) >= 0) {
-      window.location.href = '/' + lang + '/';
-    }
-    (function(){setLang(lang);})();
-
-    // ── Theme ──
-    (function() {
-      var th = localStorage.getItem('theme') || 'dark';
-      var isDark = th !== 'light';
-      document.documentElement.setAttribute('data-theme', th);
-      var btn = document.getElementById('theme-btn');
-      if (btn) {
-        btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-        btn.title=isDark?t('light_mode'):t('dark_mode');
-      }
-    })();
-    function updateThemeBtn(){
-      var btn=document.getElementById('theme-btn');if(!btn)return;
-      var isDark=document.documentElement.getAttribute('data-theme')!=='light';
-      btn.innerHTML=isDark?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-      btn.title=isDark?t('light_mode'):t('dark_mode');
-    }
-    function toggleTheme() {
-      var h = document.documentElement;
-      var next = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      h.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      updateThemeBtn();
-    }
-
-    // ── Nav event listeners ──
-    document.getElementById('lang-btn')?.addEventListener('click', toggleLang);
-    document.querySelectorAll('#lang-menu button').forEach(function(btn) {
-      var l = btn.textContent === '한국어' ? 'ko' : btn.textContent === 'English' ? 'en' : 'ja';
-      btn.addEventListener('click', function() { setLang(l); });
-    });
-    document.getElementById('theme-btn')?.addEventListener('click', toggleTheme);
-
-    // ── Mobile hamburger menu ──
-    document.getElementById('hamburger-btn')?.addEventListener('click', function() {
-      var panel = document.getElementById('hamburger-panel');
-      if (!panel) return;
-      var open = panel.classList.toggle('open');
-      this.setAttribute('aria-expanded', open);
-      if (open) updateHamburger();
-    });
-    document.addEventListener('click', function(e) {
-      var wrap = document.querySelector('.hamburger-wrap');
-      var panel = document.getElementById('hamburger-panel');
-      if (wrap && panel && !wrap.contains(e.target)) {
-        panel.classList.remove('open');
-        document.getElementById('hamburger-btn')?.setAttribute('aria-expanded', 'false');
-      }
-    });
-    document.querySelectorAll('#hamburger-panel .settings-lang-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        setLang(btn.dataset.lang);
-        document.getElementById('hamburger-panel')?.classList.remove('open');
-        document.getElementById('hamburger-btn')?.setAttribute('aria-expanded', 'false');
-      });
-    });
-    document.getElementById('hamburger-theme-btn')?.addEventListener('click', function() {
-      toggleTheme();
-      updateHamburger();
-    });
-    function updateHamburger() {
-      var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-      var icon = document.getElementById('hamburger-theme-icon');
-      if (icon) icon.innerHTML = isDark
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-      document.querySelectorAll('#hamburger-panel .settings-lang-btn').forEach(function(b) {
-        b.classList.toggle('active', b.dataset.lang === lang);
-      });
-    }
-  </script>
+  <PageScript lang={lang!} />
 </Base>
+
+<style>
+  .tools-directory {
+    max-width: var(--max-w, 1200px);
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 12px;
+  }
+  .tool-dir-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 8px);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .2s, transform .15s;
+  }
+  .tool-dir-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .tool-dir-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247, 147, 26, 0.08);
+    border-radius: 8px;
+  }
+  .tool-dir-icon .tool-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-text);
+  }
+  .tool-dir-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .tool-dir-name {
+    font-size: .88rem;
+    font-weight: 600;
+    font-family: var(--font-ko);
+    color: var(--text1);
+    margin: 0 0 4px;
+  }
+  .tool-dir-desc {
+    font-size: .75rem;
+    font-family: var(--font-ko);
+    color: var(--text3);
+    margin: 0;
+    line-height: 1.4;
+  }
+  .tool-dir-arrow {
+    flex-shrink: 0;
+    color: var(--text3);
+    transition: color .2s, transform .2s;
+  }
+  .tool-dir-card:hover .tool-dir-arrow {
+    color: var(--accent);
+    transform: translateX(2px);
+  }
+  @media (max-width: 600px) {
+    .tools-directory {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

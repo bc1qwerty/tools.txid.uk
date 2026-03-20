@@ -1,0 +1,27 @@
+---
+import ToolPage from '../../layouts/ToolPage.astro';
+import UnitConverter from '../../components/tools/UnitConverter.astro';
+import { TOOLS, TOOL_LABELS } from '../../data/tools-meta';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'en' } },
+    { params: { lang: 'ko' } },
+    { params: { lang: 'ja' } },
+  ];
+}
+
+const { lang } = Astro.params;
+const tool = TOOLS.find(t => t.slug === 'unit-converter')!;
+---
+
+<ToolPage
+  title={tool.title[lang!] || tool.title.en}
+  description={tool.description[lang!] || tool.description.en}
+  lang={lang!}
+  canonicalPath={`/${lang}/unit-converter/`}
+  keywords={tool.keywords}
+  toolName={TOOL_LABELS['unit-converter'][lang!] || TOOL_LABELS['unit-converter'].en}
+>
+  <UnitConverter />
+</ToolPage>

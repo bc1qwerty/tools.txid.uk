@@ -1,0 +1,94 @@
+---
+/**
+ * Layout for individual tool pages.
+ * Wraps Base with Header, shared JS, breadcrumb, and Footer.
+ */
+import Base from './Base.astro';
+import Header from '@txid/ui/components/Header.astro';
+import Footer from '@txid/ui/components/Footer.astro';
+import PageScript from '../components/PageScript.astro';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  lang: string;
+  canonicalPath: string;
+  keywords?: string;
+  toolName: string;
+  backLabel?: string;
+}
+
+const { title, description, lang, canonicalPath, keywords, toolName, backLabel } = Astro.props;
+
+const i18n: Record<string, Record<string, string>> = {
+  allTools: { ko: '전체 도구', en: 'All Tools', ja: '全ツール' },
+};
+const tx = (key: string) => i18n[key]?.[lang] || i18n[key]?.en || key;
+---
+
+<Base
+  title={title}
+  description={description}
+  lang={lang}
+  canonicalPath={canonicalPath}
+  keywords={keywords}
+>
+  <Header sub="Tools" />
+
+  <nav class="tool-breadcrumb" aria-label="breadcrumb">
+    <a href={`/${lang}/`} class="breadcrumb-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      {tx('allTools')}
+    </a>
+    <span class="breadcrumb-sep" aria-hidden="true">/</span>
+    <span class="breadcrumb-current">{toolName}</span>
+  </nav>
+
+  <!-- Shared utilities must load before component scripts -->
+  <script is:inline src="/tools-shared.js"></script>
+
+  <main id="main">
+    <div class="tool-page-container">
+      <slot />
+    </div>
+  </main>
+
+  <Footer />
+  <PageScript lang={lang} basePath={canonicalPath.split('/').filter(Boolean).slice(1).join('/')} />
+</Base>
+
+<style>
+  .tool-breadcrumb {
+    max-width: var(--max-w, 1200px);
+    margin: 0 auto;
+    padding: 12px 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .78rem;
+    font-family: var(--font-ko);
+  }
+  .breadcrumb-link {
+    color: var(--text3);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color .2s;
+  }
+  .breadcrumb-link:hover {
+    color: var(--accent-text);
+  }
+  .breadcrumb-sep {
+    color: var(--text3);
+  }
+  .breadcrumb-current {
+    color: var(--text2);
+  }
+  .tool-page-container {
+    max-width: var(--max-w, 1200px);
+    margin: 0 auto;
+    padding: 20px 20px 60px;
+  }
+</style>

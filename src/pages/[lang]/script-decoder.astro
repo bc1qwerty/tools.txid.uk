@@ -1,0 +1,27 @@
+---
+import ToolPage from '../../layouts/ToolPage.astro';
+import ScriptDecoder from '../../components/tools/ScriptDecoder.astro';
+import { TOOLS, TOOL_LABELS } from '../../data/tools-meta';
+
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'en' } },
+    { params: { lang: 'ko' } },
+    { params: { lang: 'ja' } },
+  ];
+}
+
+const { lang } = Astro.params;
+const tool = TOOLS.find(t => t.slug === 'script-decoder')!;
+---
+
+<ToolPage
+  title={tool.title[lang!] || tool.title.en}
+  description={tool.description[lang!] || tool.description.en}
+  lang={lang!}
+  canonicalPath={`/${lang}/script-decoder/`}
+  keywords={tool.keywords}
+  toolName={TOOL_LABELS['script-decoder'][lang!] || TOOL_LABELS['script-decoder'].en}
+>
+  <ScriptDecoder />
+</ToolPage>
