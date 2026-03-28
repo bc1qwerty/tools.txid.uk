@@ -35,10 +35,12 @@ const site = 'https://tools.txid.uk';
   <meta property="og:url" content={site + '/'}>
   <meta property="og:image" content={site + '/og-image.png'}>
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@bc1qwerty">
   <meta name="twitter:title" content={title}>
   <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={site + '/og-image.png'}>
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "WebApplication",
