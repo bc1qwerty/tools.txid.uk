@@ -18,7 +18,7 @@ const { lang, basePath } = Astro.props;
 
 <script is:inline>
   // ── Lang init with route-based navigation ──
-  var pageLang = window.__pageLang || 'ko';
+  var pageLang = window.__pageLang || 'en';
   var basePath = window.__basePath || '';
   var _origSetLang = setLang;
   setLang = function(l) {

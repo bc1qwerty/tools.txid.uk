@@ -4,7 +4,7 @@ function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt
 async function fetchRetry(url,timeout,retries){for(let i=0,m=retries||2;i<=m;i++){try{return await fetch(url,{signal:AbortSignal.timeout(timeout||10000)});}catch(e){if(i>=m)throw e;await new Promise(r=>setTimeout(r,1000<<i));}}}
 
 // ── i18n ──
-let lang = localStorage.getItem('lang') || 'ko';
+let lang = localStorage.getItem('lang') || 'en';
 const LABELS = {
   ko: {탐색기:'탐색기', 도구:'도구', 시각화:'시각화', 통계:'통계', 노드:'노드', 지도:'지도', 포트폴리오:'포트폴리오', 전송:'전송', 배우기:'배우기', 앱모음:'앱모음'},
   en: {탐색기:'Explorer', 도구:'Tools', 시각화:'Viz', 통계:'Stats', 노드:'Nodes', 지도:'Map', 포트폴리오:'Portfolio', 전송:'TX', 배우기:'Learn', 앱모음:'Apps'},
@@ -190,7 +190,7 @@ function t(key){ return (T[lang]&&T[lang][key]) || T.en[key] || key; }
 function setLang(l){
   lang=l; localStorage.setItem('lang',lang); document.documentElement.lang=lang;
   var btn=document.getElementById('lang-btn');
-  if(btn) btn.textContent={ko:'KO',en:'EN',ja:'JA'}[lang]||'KO';
+  if(btn) btn.textContent={ko:'KO',en:'EN',ja:'JA'}[lang]||'EN';
   document.getElementById('lang-menu')?.classList.remove('open');
   document.querySelectorAll('[data-ko]').forEach(function(el){
     var val=el.dataset[lang]||el.dataset.en||el.dataset.ko;
