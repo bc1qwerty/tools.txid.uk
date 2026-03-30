@@ -18,5 +18,8 @@
     "@txid/ui": "file:./packages/txid-ui",
     "astro": "^6.0.5",
     "preact": "^10.29.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
